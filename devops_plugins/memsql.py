@@ -41,5 +41,17 @@ class Memsql(TunneledPlugin):
             res = cursor.fetchall()
         return res
 
+    def fetch_one(self, query):
+        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
+            cursor.execute(query)
+            res = cursor.fetchone()
+        return res
+
+    def fetch_count(self, query):
+        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
+            cursor.execute(query)
+            res = cursor.fetchone()
+        return res['count']
+
 
 plugins.register('Memsql', Memsql)
