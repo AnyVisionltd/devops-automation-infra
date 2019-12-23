@@ -1,21 +1,16 @@
 from contextlib import closing
-
-from munch import Munch
 import pymysql
-import sshtunnel
 
 from infra.model import plugins
+from infra.plugins.base_plugin import TunneledPlugin
+from runner import helpers
 
 
-class Memsql(object):
-    HOST = 'memsql.tls.ai'
-    PORT = '3306'
-
+class Memsql(TunneledPlugin):
     def __init__(self, host):
-        self.tunnel = sshtunnel.open_tunnel((host.ip, host.SSH.TUNNEL_PORT),
-                                   ssh_username=host.user, ssh_password=host.password, ssh_pkey=host.keyfile,
-                                   remote_bind_address=(self.HOST, self.PORT))
-        self.tunnel.start()
+        super().__init__(host)
+        self.DNS_NAME = 'memsql.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'memsql.default.svc.cluster.local'
+        self.PORT = 3306
         self._connection = None
 
     @property
@@ -25,8 +20,9 @@ class Memsql(object):
         return self._connection
 
     def _get_connection(self):
+        self.start_tunnel(self.DNS_NAME, self.PORT)
         connection = pymysql.connect(host='localhost',
-                                     port=self.tunnel.local_bind_port,
+                                     port=self.local_bind_port,
                                      user='root',
                                      password='password',
                                      cursorclass=pymysql.cursors.DictCursor)
@@ -44,10 +40,6 @@ class Memsql(object):
             cursor.execute(query)
             res = cursor.fetchall()
         return res
-
-    def insert_suspect(self, sus_details):
-        query = '''insert into suspects sus'''
-        self.upsert(query)
 
 
 plugins.register('Memsql', Memsql)
