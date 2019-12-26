@@ -1,46 +1,52 @@
-from munch import Munch
-import requests
-import sshtunnel
-
 from infra.model import plugins
+from infra.plugins.base_plugin import TunneledPlugin
+from runner import helpers
+import boto3
 
 
-class Seaweed(object):
-    SEAWEED = 'seaweedfs-filer-localnode.tls.ai'
-    SEAWEED_PORT = 8888
+class Seaweed(TunneledPlugin):
     def __init__(self, host):
-        self.tunnel = sshtunnel.open_tunnel((host.ip, host.SSH.TUNNEL_PORT),
-                                   ssh_username=host.user, ssh_password=host.password, ssh_pkey=host.keyfile,
-                                   remote_bind_address=(CONSTS.SEAWEED, CONSTS.SEAWEED_PORT))
-        self.tunnel.start()
+        super().__init__(host)
+        self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'seaweedfs-s3-localnode.default.svc.cluster.local'
+        self.PORT = 8333
+        self._client = None
 
-    def get_full_seaweed_path(self, relative_path):
-        full_sw_path = f'http://localhost:{self.tunnel.local_bind_port}/{relative_path}'
-        return full_sw_path
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = self._s3_client()
+        return self._client
 
-    def get_image(self, relative_path):
-        full_sw_path = self.get_full_seaweed_path(relative_path)
-        print(f"sw_path: {full_sw_path}")
-        res = requests.get(full_sw_path, timeout=10)
-        # img = Image.open(BytesIO(res.content))
-        # img.show()
-        return res
+    def _s3_client(self):
+        self.start_tunnel(self.DNS_NAME, self.PORT)
+        s3_endpoint_url = f'http://localhost:{self.local_bind_port}'
+        s3 = boto3.client('s3', endpoint_url=s3_endpoint_url,
+                          aws_secret_access_key='any',
+                          aws_access_key_id='any')
+        return s3
 
-    def get_buckets(self):
-        res = requests.get(f'http://localhost:{self.tunnel.local_bind_port}/buckets')
-        assert res.status_code == 200
-        return res.content  # TODO: parse this into list or somn...
+    def get_bucket_files(self, bucket_name):
+        res = self.client.list_objects(Bucket=bucket_name)
+        res_code = res['ResponseMetadata']['HTTPStatusCode']
+        assert res_code == 200
+        bct_list = []
+        for content in res.get('Contents', []):
+            bct_list.append(content.get('Key'))
+        return bct_list
 
     def create_bucket(self, bucket_name):
-        res = requests.put(f'http://localhost:{self.tunnel.local_bind_port}/buckets/{bucket_name}')
-        assert res.status_code == 201
+        res = self.client.create_bucket(Bucket=bucket_name)
+        res_code = res['ResponseMetadata']['HTTPStatusCode']
+        assert res_code == 200
 
     def delete_bucket(self, bucket_name):
-        res = requests.delete(f'http://localhost:{self.tunnel.local_bind_port}/buckets/{bucket_name}')
-        assert res.status_code == 204
+        res = self.client.delete_bucket(Bucket=bucket_name)
+        res_code = res['ResponseMetadata']['HTTPStatusCode']
+        assert res_code == 204
 
-    # TODO: implement other methods here...
-
+    def upload_file_to_bucket(self, src_file_path, dst_bucket, ds_file_name):
+        res = self.client.upload_file(src_file_path, dst_bucket, ds_file_name)
+        assert res is None
 
 
 plugins.register('Seaweed', Seaweed)
