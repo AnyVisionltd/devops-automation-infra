@@ -1,10 +1,12 @@
 import os
 import random
 import time
-
 import pytest
-
+import random
 from runner.helpers import hardware_config
+
+# These (and all other used plugins) need to be imported even though they are grayed out in pycharm!
+from devops_plugins import memsql, memsql, seaweed
 
 # automation-infra repo needs to be added as content root to pycharm project
 # TODO: create installer for plugin and add to requirements
@@ -44,7 +46,22 @@ def test_memsql_add_suspect(base_config):
     assert res == 1
 
 
-@hardware_config(hardware={"type": "pasha_pass"})
+memsql_suspects_to_add = [[random.randint(1, 999999),1,0,123,123,4141] for i in range(5)]
+test_data = [(tuple(suspect), 1) for suspect in memsql_suspects_to_add]
+
+
+@hardware_config(hardware={"type": "ori_pass"})
+@pytest.mark.parametrize("suspect, expected", test_data)
+def test_memsql_add_suspects(base_config, suspect, expected):
+    query = f'''INSERT INTO `reid_db`.`poi`
+            (`poi_id`,`detection_type`,`is_ignored`,`feature_id`,`features`,`valid_until`)
+            VALUES
+            {suspect};'''
+    res = base_config.host.Memsql.upsert(query)
+    assert res == expected
+
+
+@hardware_config(hardware={"type": "ori_pass"})
 def test_consul_get_services(base_config):
     _, services_dict = base_config.host.Consul.get_services()
     assert len(services_dict) > 0
@@ -68,4 +85,6 @@ def test_kafka_functionality(base_config):
 
 
 if __name__ == '__main__':
-    pytest.main()
+    # These are examples of possible ways to run:
+    pytest.main(['test_demo.py::test_memsql_add_suspects', ])
+    #pytest.main(['test_demo.py', ])
