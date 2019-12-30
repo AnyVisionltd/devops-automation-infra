@@ -1,6 +1,7 @@
 from infra.model import plugins
 from infra.plugins.base_plugin import TunneledPlugin
 from runner import helpers
+from botocore.exceptions import ClientError
 import boto3
 import os
 
@@ -56,6 +57,14 @@ class Seaweed(TunneledPlugin):
         missing_files = [item for item in src_files if item not in dst_files]
         for _file in missing_files:
             self.upload_file_to_bucket(path + _file, dst_bucket, _file)
+
+    def file_exists(self, bucket_name, file_name):
+        try:
+            self.client.head_object(Bucket=bucket_name, Key=file_name)
+        except ClientError:
+            return False
+        else:
+            return True
 
 
 plugins.register('Seaweed', Seaweed)
