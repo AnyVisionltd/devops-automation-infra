@@ -1,52 +1,52 @@
-import time
-from pprint import pprint
-
-import sshtunnel
-from munch import Munch
-import random
-
-from runner import CONSTS
+from infra.plugins.base_plugin import TunneledPlugin
 from infra.model import plugins
+from datetime import datetime
 
 from confluent_kafka import Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic, KafkaException
 
-automation_tests_topic = 'anv.automation.topic1'
-consumer_group = {"group.id": 'automation_group'}
+from runner import helpers
 
 
-class Kafka(object):
-    KAFKA = 'kafka.tls.ai'
-    KAFKA_PORT = 9092
+class Kafka(TunneledPlugin):
     def __init__(self, host):
-        self._tunnel = sshtunnel.open_tunnel((host.ip, CONSTS.TUNNEL_PORT),
-                                             ssh_username=host.user, ssh_password=host.password,
-                                             ssh_pkey=host.keyfile,
-                                             remote_bind_address=(CONSTS.KAFKA, CONSTS.KAFKA_PORT))
-        self._tunnel.start()
-        self.bs_servers = {'bootstrap.servers': f'localhost:{self._tunnel.local_bind_port}'}
+        super().__init__(host)
+        self.DNS_NAME = 'kafka.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'kafka.default.svc.cluster.local'
+        self.PORT = 9092
+        self.start_tunnel(self.DNS_NAME, self.PORT)
+        self.kafka_config = {'bootstrap.servers': f"localhost:{self.local_bind_port}", 'group.id': "automation-group",
+                             'session.timeout.ms': 6000, 'auto.offset.reset': 'earliest'}
 
-        self.kafka_admin = AdminClient(self.bs_servers)
-        self._c = Consumer({**self.bs_servers, **consumer_group})
-        self._p = Producer(self.bs_servers)
+        self._kafka_admin = None
+        self._c = None
+        self._p = None
 
     @property
     def consumer(self):
-        """ Property, return the Kafka consumer object of this class."""
+        if self._c is None:
+            self._c = Consumer(self.kafka_config)
         return self._c
 
     @property
     def producer(self):
+        if self._p is None:
+            self._p = Producer(self.kafka_config)
         return self._p
 
+    @property
+    def admin(self):
+        if self._kafka_admin is None:
+            self._kafka_admin = AdminClient(self.kafka_config)
+        return self._kafka_admin
+
     def get_topics(self):
-        topics = self.kafka_admin.list_topics(timeout=5)
-        return topics
+        topics = self.admin.list_topics(timeout=5)
+        return topics.topics
 
     def create_topic(self, name):
         """create topic if not exists"""
         new_topic = NewTopic(name, num_partitions=3, replication_factor=1)
-        fs = self.kafka_admin.create_topics([new_topic])
+        fs = self.admin.create_topics([new_topic])
         for topic, f in fs.items():
             try:
                 f.result()  # The result itself is None
@@ -66,51 +66,41 @@ class Kafka(object):
         for i in range(tries):
             msg = self.consumer.poll()
             if msg is not None:
-                key, value = self.parse_message(msg)
-                return key, value
-        return None, None
+                return msg
+            else:
+                return None
 
-    def consume_iter(self, *topics, timeout=None, commit=False):
+    def consume_iter(self, topics, timeout=None, commit=False):
         """ Generator - use Kafka consumer for receiving messages from the given *topics* list.
             Yield a tuple of each message key and value.
             If got a *timeout* argument - break the loop if passed the value in seconds, but did not
             received messages since the last one was processed.
             If the optional argument *commit* is true, commit each message consumed."""
-        if len(topics) == 0:
-            raise TypeError('at least one topic must be received to consume_iter instance')
+        # if len(topic) == 0:
+        #     raise TypeError('at least one topic must be received to consume_iter instance')
 
         print(f'Started receiving messages (timeout: {timeout}).')
 
         try:
-            self.consumer.subscribe(list(topics))
+            self.consumer.subscribe(topics)
             self._is_consuming = True
-            last_ts = time.time()
-            while timeout is None or time.time() - last_ts < timeout:
-                msg = self.consumer.poll(timeout=0.1)
-                self._last_message = msg
-                if msg is None:
-                    yield None, None
-                elif not msg.error():
-                    key, value = self.parse_message(msg)
-                    print(f'Received message: {key}.')
-                    yield key, value
-                elif 'No more messages' not in msg.error().str():
-                    error = msg.error().str()
-                    raise Exception(f'an error occurred during receiving messages: {error}')
-
+            last_ts = datetime.now()
+            while timeout is None or (datetime.now() - last_ts).seconds < timeout:
+                for i in range(2):
+                    msg = self.consumer.poll(timeout=1)
+                    self._last_message = msg
+                    if msg is not None:
+                        last_ts = datetime.now()
+                        yield msg
                 if commit is True and msg is not None:
                     offset = msg.offset()
                     if offset < 0:
                         offset = 0
                     tpo = TopicPartition(topic=msg.topic(), partition=msg.partition(), offset=offset)
                     self.consumer.commit(offsets=[tpo], asynchronous=True)
-                last_ts = time.time()
-        except:
-            print("Error in consume_iter")
+        except Exception as e:
+            print(f"Error in consume_iter {e}")
         finally:
-            joined_topics = ', '.join(topics)
-            print(f"Finished receiving messages from topic/s "
-                          f"'{joined_topics}'.")
             self._is_consuming = False
             self._last_message = None
 
@@ -121,7 +111,7 @@ class Kafka(object):
     @staticmethod
     def delivery_report(err, msg):
         if err:
-            raise
+            raise Exception
         else:
             print(f"message {msg} put successfully")
 
@@ -130,7 +120,7 @@ class Kafka(object):
         self.producer.poll(0)
 
     def delete_topic(self, topic):
-        fs = self.kafka_admin.delete_topics([topic], operation_timeout=30)
+        fs = self.admin.delete_topics([topic], operation_timeout=30)
 
         # Wait for operation to finish.
         for topic, f in fs.items():
@@ -145,29 +135,6 @@ class Kafka(object):
 plugins.register('Kafka', Kafka)
 
 
-def check_flow_works():
-    kafka_obj = Kafka()
-    while True:
-        for key, val in kafka_obj.consume_iter(automation_tests_topic, commit=True, timeout=5):
-            try:
-                if key is None:
-                    kafka_obj.put_message(f'key{random.randint(0,10)}', f"test {random.randint(10, 100)}")
-                    continue  # When kafka reach the timeout he returns None (no new tracks)
-                print(key, val)
-            except Exception as e:
-                print(f"caught exception: {e}")
-
-
-if __name__ == '__main__':
-    host = Munch(ip='0.0.0.0', user='user', password='pass', keyfile='')
-    kafka_obj = Kafka(host)
-    topics = kafka_obj.get_topics()
-    pprint(topics.topics)
-    assert len(topics.topics) > 1
-    success = kafka_obj.create_topic('oris_new_topic')
-    assert success
-    success = kafka_obj.delete_topic('oris_new_topic')
-    assert success
-    kafka_obj.create_topic(automation_tests_topic)
-    check_flow_works()
-
+def test_basic(base_config):
+    topics = base_config.host.Kafka.get_topics()
+    print(topics)
