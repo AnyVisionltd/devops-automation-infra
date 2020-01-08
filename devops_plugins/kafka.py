@@ -70,6 +70,16 @@ class Kafka(TunneledPlugin):
             else:
                 return None
 
+
+    def consume_messages_for_x_seconds(self, topic, seconds):
+        self.consumer.subscribe(topic)
+        list_of_msg = []
+        for i in range(seconds):
+            msg = self.consumer.poll(timeout=1)
+            if msg is not None:
+                list_of_msg.append(msg)
+        return list_of_msg
+
     def consume_iter(self, topics, timeout=None, commit=False):
         """ Generator - use Kafka consumer for receiving messages from the given *topics* list.
             Yield a tuple of each message key and value.
