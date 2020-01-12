@@ -1,6 +1,6 @@
 from infra.model import plugins
 from infra.plugins.base_plugin import TunneledPlugin
-from runner import helpers
+from pytest_automation_infra import helpers
 from botocore.exceptions import ClientError
 import boto3
 import os

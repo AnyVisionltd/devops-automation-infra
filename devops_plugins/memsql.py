@@ -3,7 +3,7 @@ import pymysql
 
 from infra.model import plugins
 from infra.plugins.base_plugin import TunneledPlugin
-from runner import helpers
+from pytest_automation_infra import helpers
 
 
 class Memsql(TunneledPlugin):
