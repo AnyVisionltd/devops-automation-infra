@@ -3,7 +3,8 @@ import random
 import time
 import pytest
 import random
-from runner.helpers import hardware_config
+from pytest_automation_infra.helpers import hardware_config
+
 
 # These (and all other used plugins) need to be imported even though they are grayed out in pycharm!
 from devops_plugins import memsql, memsql, seaweed

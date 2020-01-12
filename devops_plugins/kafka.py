@@ -5,7 +5,7 @@ from datetime import datetime
 from confluent_kafka import Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic, KafkaException
 
-from runner import helpers
+from pytest_automation_infra import helpers
 
 
 class Kafka(TunneledPlugin):

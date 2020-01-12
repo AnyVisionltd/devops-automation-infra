@@ -4,7 +4,7 @@ import psycopg2.extras
 
 from infra.model import plugins
 from infra.plugins.base_plugin import TunneledPlugin
-from runner import helpers
+
 
 class Postgresql(TunneledPlugin):
     def __init__(self,host):
