@@ -27,6 +27,8 @@ class Seaweed(TunneledPlugin):
                           aws_access_key_id='any')
         return s3
 
+    '''Example --- s3://buckets/bucket1/10212020/video.mp4 
+    bucket_name = buckets  key = bucket1/10212020/video.mp4'''
     def check_video_path(self, bucket_name, key):
         res = self.client.get_object(Bucket=bucket_name, Key=key)
         assert res['ResponseMetadata']['HTTPStatusCode'] == 200
