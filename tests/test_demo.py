@@ -1,13 +1,11 @@
 import os
 import sys
 import time
-import pytest
-import random
 
-from devops_plugins.seaweed import Seaweed
-from devops_plugins.memsql import Memsql
-from devops_plugins.consul import Consul
-from devops_plugins.kafka import Kafka
+from seaweed import Seaweed
+from memsql import Memsql
+from consul import Consul
+from kafka import Kafka
 from pytest_automation_infra.helpers import hardware_config
 
 

@@ -1,4 +1,4 @@
-from devops_plugins.kafka import Kafka
+from kafka import Kafka
 
 
 def test_kafka_consume_topic(base_config):
