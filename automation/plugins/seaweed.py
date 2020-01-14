@@ -66,5 +66,10 @@ class Seaweed(TunneledPlugin):
         else:
             return True
 
+    def check_video_path(self, bucket_name, key):
+        res = self.client.get_object(Bucket=bucket_name, Key=key)
+        assert res['ResponseMetadata']['HTTPStatusCode'] == 200
+        return res
+
 
 plugins.register('Seaweed', Seaweed)
