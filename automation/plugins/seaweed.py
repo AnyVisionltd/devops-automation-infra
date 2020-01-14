@@ -1,5 +1,5 @@
 from infra.model import plugins
-from infra.plugins.base_plugin import TunneledPlugin
+from base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
 from botocore.exceptions import ClientError
 import boto3

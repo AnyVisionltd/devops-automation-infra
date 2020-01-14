@@ -1,4 +1,4 @@
-from infra.plugins.base_plugin import TunneledPlugin
+from base_plugin import TunneledPlugin
 from infra.model import plugins
 from datetime import datetime
 

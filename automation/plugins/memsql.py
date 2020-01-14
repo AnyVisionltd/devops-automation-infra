@@ -1,16 +1,16 @@
 from contextlib import closing
-import psycopg2
-import psycopg2.extras
+import pymysql
 
 from infra.model import plugins
-from infra.plugins.base_plugin import TunneledPlugin
+from base_plugin import TunneledPlugin
+from pytest_automation_infra import helpers
 
 
-class Postgresql(TunneledPlugin):
-    def __init__(self,host):
+class Memsql(TunneledPlugin):
+    def __init__(self, host):
         super().__init__(host)
-        self.DNS_NAME = 'postgres.tls.ai'
-        self.PORT = 5432
+        self.DNS_NAME = 'memsql.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'memsql.default.svc.cluster.local'
+        self.PORT = 3306
         self._connection = None
 
     @property
@@ -21,35 +21,37 @@ class Postgresql(TunneledPlugin):
 
     def _get_connection(self):
         self.start_tunnel(self.DNS_NAME, self.PORT)
-        connection = psycopg2.connect(host='localhost',
+        connection = pymysql.connect(host='localhost',
                                      port=self.local_bind_port,
-                                     user='anv_admin',
-                                     password='',
-                                     database = 'anv_db')
+                                     user='root',
+                                     password='password',
+                                     cursorclass=pymysql.cursors.DictCursor)
 
         return connection
 
     def upsert(self, query):
         with closing(self.connection.cursor()) as cursor:
-            cursor.execute(query)
-            self.connection.commit()
+            res = cursor.execute(query)
+        self.connection.commit()
+        return res
 
     def fetch_all(self, query):
-        with closing(self.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)) as cursor:
+        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
             cursor.execute(query)
             res = cursor.fetchall()
         return res
 
     def fetch_one(self, query):
-        with closing(self.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)) as cursor:
+        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
             cursor.execute(query)
             res = cursor.fetchone()
         return res
 
     def fetch_count(self, query):
-        with closing(self.connection.cursor(cursor_factory=psycopg2.extras.DictCursor)) as cursor:
+        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
             cursor.execute(query)
             res = cursor.fetchone()
         return res['count']
 
-plugins.register('Postgresql', Postgresql)
+
+plugins.register('Memsql', Memsql)
