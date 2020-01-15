@@ -1,11 +1,18 @@
+import logging
+import time
+
 from base_plugin import TunneledPlugin
 from infra.model import plugins
 from datetime import datetime
+import random
 
 from confluent_kafka import Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic, KafkaException
 
 from pytest_automation_infra import helpers
+from pytest_automation_infra.helpers import hardware_config
+
+automation_tests_topic = 'anv.automation.topic1'
 
 
 class Kafka(TunneledPlugin):
@@ -61,20 +68,18 @@ class Kafka(TunneledPlugin):
                 print("Failed to create topic {}: {}".format(topic, e))
                 raise
 
-    def get_message(self, topic, tries=3):
-        self.consumer.subscribe(topic)
+    def get_message(self, topics, tries=3):
+        self.consumer.subscribe(topics)
         for i in range(tries):
-            msg = self.consumer.poll()
+            msg = self.consumer.poll(timeout=1)
             if msg is not None:
                 return msg
-            else:
-                return None
+        return None
 
-
-    def consume_messages_for_x_seconds(self, topic, seconds):
-        self.consumer.subscribe(topic)
+    def consume_messages_x_times(self, topics, times):
+        self.consumer.subscribe(topics)
         list_of_msg = []
-        for i in range(seconds):
+        for i in range(times):
             msg = self.consumer.poll(timeout=1)
             if msg is not None:
                 list_of_msg.append(msg)
@@ -86,33 +91,32 @@ class Kafka(TunneledPlugin):
             If got a *timeout* argument - break the loop if passed the value in seconds, but did not
             received messages since the last one was processed.
             If the optional argument *commit* is true, commit each message consumed."""
-        # if len(topic) == 0:
-        #     raise TypeError('at least one topic must be received to consume_iter instance')
 
         print(f'Started receiving messages (timeout: {timeout}).')
 
+        self.consumer.subscribe(topics)
+        last_ts = datetime.now()
         try:
-            self.consumer.subscribe(topics)
-            self._is_consuming = True
-            last_ts = datetime.now()
-            while timeout is None or (datetime.now() - last_ts).seconds < timeout:
-                for i in range(2):
-                    msg = self.consumer.poll(timeout=1)
-                    self._last_message = msg
-                    if msg is not None:
-                        last_ts = datetime.now()
-                        yield msg
+            while (timeout is None) or ((datetime.now() - last_ts).seconds < timeout):
+                msg = self.consumer.poll(timeout=1)
+                if msg is None:
+                    continue
+                last_ts = datetime.now()
+                if msg.error():
+                    raise KafkaException(msg.error())
+                else:
+                    yield msg
                 if commit is True and msg is not None:
                     offset = msg.offset()
                     if offset < 0:
                         offset = 0
                     tpo = TopicPartition(topic=msg.topic(), partition=msg.partition(), offset=offset)
                     self.consumer.commit(offsets=[tpo], asynchronous=True)
+
         except Exception as e:
             print(f"Error in consume_iter {e}")
         finally:
-            self._is_consuming = False
-            self._last_message = None
+            logging.info(f"Stopping to consume topics {topics}")
 
     def parse_message(self, msg):
         key, value = msg.key().decode(), msg.value().decode()
@@ -125,8 +129,8 @@ class Kafka(TunneledPlugin):
         else:
             print(f"message {msg} put successfully")
 
-    def put_message(self, key, msg):
-        self.producer.produce(topic=automation_tests_topic, key=key, value=msg, callback=self.delivery_report)
+    def put_message(self, topic, key, msg):
+        self.producer.produce(topic=topic, key=key, value=msg, callback=self.delivery_report)
         self.producer.poll(0)
 
     def delete_topic(self, topic):
@@ -141,10 +145,22 @@ class Kafka(TunneledPlugin):
             except Exception as e:
                 print("Failed to delete topic {}: {}".format(topic, e))
 
+    def empty(self, topics):
+        for msg in self.consume_iter(topics, timeout=5, commit=True):
+            logging.debug(f"emptying message {msg}")
+        # This is a double check to make sure topic is empty:
+        time.sleep(5)
+        assert self.get_message(topics) is None
+
 
 plugins.register('Kafka', Kafka)
 
 
+@hardware_config(hardware={"host": {}})
 def test_basic(base_config):
-    topics = base_config.host.Kafka.get_topics()
-    print(topics)
+    kafka = base_config.hosts.host.Kafka
+    kafka.create_topic(automation_tests_topic)
+    for i in range(10):
+        kafka.put_message(automation_tests_topic, f'key{random.randint(0, 10)}', f"test {random.randint(10, 100)}")
+
+    kafka.empty([automation_tests_topic])
