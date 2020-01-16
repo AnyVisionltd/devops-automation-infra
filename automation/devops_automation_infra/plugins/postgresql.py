@@ -3,7 +3,7 @@ import psycopg2
 import psycopg2.extras
 
 from infra.model import plugins
-from base_plugin import TunneledPlugin
+from automation_infra.plugins.base_plugin import TunneledPlugin
 
 
 class Postgresql(TunneledPlugin):

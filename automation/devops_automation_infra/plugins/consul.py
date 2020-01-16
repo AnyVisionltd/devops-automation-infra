@@ -1,6 +1,4 @@
 import sshtunnel
-import consul
-from munch import Munch
 
 from infra.model import plugins
 
