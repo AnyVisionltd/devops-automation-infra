@@ -1,25 +1,18 @@
 import os
-import sys
 import time
 
-from seaweed import Seaweed
-from memsql import Memsql
-from consul import Consul
-from kafka import Kafka
 from pytest_automation_infra.helpers import hardware_config
 
-
-sys.path.insert(0, '__file__...')
-
-# These (and all other used plugins) need to be imported even though they are grayed out in pycharm!
-
-# automation-infra repo needs to be added as content root to pycharm project
-# TODO: create installer for plugin and add to requirements
-#pytest_plugins = "pytest_automation_infra"
+# These plugins need to be imported even though theyre grayed out:
+from automation_infra.plugins.ssh import SSH
+from devops_automation_infra.plugins.seaweed import Seaweed
+from devops_automation_infra.plugins.consul import Consul
+from devops_automation_infra.plugins.kafka import Kafka
+from devops_automation_infra.plugins.memsql import Memsql
 
 hardware = {"type": "ori_pass"}
 
-# These are all example tests:
+
 @hardware_config(hardware={"host": {}})
 def test_ssh(base_config):
     print("Running ssh test!")

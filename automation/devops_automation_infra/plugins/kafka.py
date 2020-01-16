@@ -1,7 +1,7 @@
 import logging
 import time
 
-from base_plugin import TunneledPlugin
+from automation_infra.plugins.base_plugin import TunneledPlugin
 from infra.model import plugins
 from datetime import datetime
 import random

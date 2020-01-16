@@ -2,7 +2,7 @@ from contextlib import closing
 import pymysql
 
 from infra.model import plugins
-from base_plugin import TunneledPlugin
+from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
 
 
