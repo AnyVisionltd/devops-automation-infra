@@ -149,8 +149,8 @@ class Kafka(TunneledPlugin):
             except Exception as e:
                 logging.exception("Failed to delete topic {}: {}".format(topic, e))
 
-    def empty(self, topics):
-        for msg in self.consume_iter(topics, timeout=5, commit=True):
+    def empty(self, topics, timeout=10):
+        for msg in self.consume_iter(topics, timeout=timeout, commit=True):
             logging.debug(f"emptying message {msg}")
         # This is a double check to make sure topic is empty:
         time.sleep(5)
