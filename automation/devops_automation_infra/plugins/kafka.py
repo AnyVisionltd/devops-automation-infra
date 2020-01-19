@@ -48,7 +48,11 @@ class Kafka(TunneledPlugin):
 
     def get_topics(self):
         topics = self.admin.list_topics(timeout=5)
-        return topics.topics
+        return topics.topics  # This is a dict with k:v topic_name(str): TopicMetaData(obj)
+
+    def topic_names(self):
+        topics = self.get_topics()
+        return [k for k, v in topics.items()]
 
     def create_topic(self, name):
         """create topic if not exists"""
@@ -57,15 +61,15 @@ class Kafka(TunneledPlugin):
         for topic, f in fs.items():
             try:
                 f.result()  # The result itself is None
-                print("Topic {} created".format(topic))
+                logging.info("Topic {} created".format(topic))
                 return True
             except KafkaException:
                 # TODO: validate this exception is thrown only when topic exists and not in other cases
                 # Othewise can add check before trying to create it...
-                print("topic already exists")
+                logging.exception("topic already exists")
                 return True
             except Exception as e:
-                print("Failed to create topic {}: {}".format(topic, e))
+                logging.exception("Failed to create topic {}: {}".format(topic, e))
                 raise
 
     def get_message(self, topics, tries=3):
@@ -92,7 +96,7 @@ class Kafka(TunneledPlugin):
             received messages since the last one was processed.
             If the optional argument *commit* is true, commit each message consumed."""
 
-        print(f'Started receiving messages (timeout: {timeout}).')
+        logging.info(f'Starting to consume message (timeout: {timeout}).')
 
         self.consumer.subscribe(topics)
         last_ts = datetime.now()
@@ -114,7 +118,7 @@ class Kafka(TunneledPlugin):
                     self.consumer.commit(offsets=[tpo], asynchronous=True)
 
         except Exception as e:
-            print(f"Error in consume_iter {e}")
+            logging.exception(f"Error in consume_iter")
         finally:
             logging.info(f"Stopping to consume topics {topics}")
 
@@ -127,7 +131,7 @@ class Kafka(TunneledPlugin):
         if err:
             raise Exception
         else:
-            print(f"message {msg} put successfully")
+            logging.info(f"message {msg} put successfully")
 
     def put_message(self, topic, key, msg):
         self.producer.produce(topic=topic, key=key, value=msg, callback=self.delivery_report)
@@ -140,10 +144,10 @@ class Kafka(TunneledPlugin):
         for topic, f in fs.items():
             try:
                 f.result()  # The result itself is None
-                print("Topic {} deleted".format(topic))
+                logging.info("Topic {} deleted".format(topic))
                 return True
             except Exception as e:
-                print("Failed to delete topic {}: {}".format(topic, e))
+                logging.exception("Failed to delete topic {}: {}".format(topic, e))
 
     def empty(self, topics):
         for msg in self.consume_iter(topics, timeout=5, commit=True):
