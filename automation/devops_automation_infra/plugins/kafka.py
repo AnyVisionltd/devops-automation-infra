@@ -16,14 +16,17 @@ automation_tests_topic = 'anv.automation.topic1'
 
 
 class Kafka(TunneledPlugin):
+    """In order for the kafka tunneling to work there are 3 options:
+    1. Run either locally
+    2. 127.0.0.1 kafka.tls.ai in /etc/hosts file (to use tunnel)
+    3. via containerize script which will add previous line to container hosts file"""
     def __init__(self, host):
         super().__init__(host)
         self.DNS_NAME = 'kafka.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'kafka.default.svc.cluster.local'
         self.PORT = 9092
         self.start_tunnel(self.DNS_NAME, self.PORT)
-        self.kafka_config = {'bootstrap.servers': f"localhost:{self.local_bind_port}", 'group.id': "automation-group",
+        self.kafka_config = {'bootstrap.servers': f"{self.DNS_NAME}:{self.local_bind_port}", 'group.id': "automation-group",
                              'session.timeout.ms': 6000, 'auto.offset.reset': 'earliest'}
-
         self._kafka_admin = None
         self._c = None
         self._p = None
