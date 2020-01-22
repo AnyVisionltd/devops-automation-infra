@@ -1,21 +1,21 @@
 import sshtunnel
-
+import consul
+from munch import Munch
+from automation_infra.plugins.base_plugin import TunneledPlugin
 from infra.model import plugins
+from pytest_automation_infra import helpers
 
 
-class Consul(object):
-    HOST = 'consul.tls.ai'
-    PORT = 8500
-
+class Consul(TunneledPlugin):
     def __init__(self, host):
-        self._tunnel = sshtunnel.open_tunnel((host.ip, CONSTS.TUNNEL_PORT),
-                                             ssh_username=host.user, ssh_password=host.password, ssh_pkey=host.keyfile,
-                                             remote_bind_address=(CONSTS.CONSUL, CONSTS.CONSUL_PORT))
-        self._tunnel.start()
-        self._consul = consul.Consul('localhost', self._tunnel.local_bind_port)
+        super().__init__(host)
+        self.DNS_NAME = 'consul.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'consul.default.svc.cluster.local'
+        self.PORT = 8500
+        self.start_tunnel(self.DNS_NAME, self.PORT)
+        self._consul = consul.Consul("localhost", self.local_bind_port)
 
     def get_services(self):
-        return self._consul.catalog.services()
+        return self._consul.catalog.services()[1]
 
     def put_key(self, key, val):
         res = self._consul.kv.put(key, val)
