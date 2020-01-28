@@ -50,6 +50,10 @@ class Seaweed(TunneledPlugin):
         res = self.client.upload_file(src_file_path, dst_bucket, ds_file_name)
         assert res is None
 
+    def upload_fileobj(self, file_obj, dst_bucket, dst_filepath):
+        res = self.client.upload_fileobj(file_obj, dst_bucket, dst_filepath)
+        assert res is None
+
     def upload_files_from(self, path, dst_bucket):
         self.create_bucket(dst_bucket)
         src_files = os.listdir(path)
