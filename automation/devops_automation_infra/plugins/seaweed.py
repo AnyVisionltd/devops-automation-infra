@@ -86,5 +86,12 @@ class Seaweed(TunneledPlugin):
         assert res['ResponseMetadata']['HTTPStatusCode'] == 200
         return res
 
+    def get_files_in_dir(self, bucket_name, dir_path):
+        result = []
+        resp = self.client.list_objects_v2(Bucket=bucket_name, Prefix=dir_path, Delimiter='/')
+        for obj in resp['Contents']:
+            result.append(obj['Key'])
+        return result
+
 
 plugins.register('Seaweed', Seaweed)
