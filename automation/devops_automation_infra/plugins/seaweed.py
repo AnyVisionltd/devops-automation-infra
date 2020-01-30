@@ -27,14 +27,20 @@ class Seaweed(TunneledPlugin):
                           aws_access_key_id='any')
         return s3
 
-    def get_bucket_files(self, bucket_name):
-        res = self.client.list_objects(Bucket=bucket_name)
+    def get_bucket_files(self, bucket_name, recursive=True):
+        return self.get_files_by_prefix(bucket_name, '', recursive)
+
+    def get_files_by_prefix(self, bucket_name, prefix, recursive=True):
+        res = self.client.list_objects(Bucket=bucket_name, Prefix=prefix)
         res_code = res['ResponseMetadata']['HTTPStatusCode']
         assert res_code == 200
-        bct_list = []
-        for content in res.get('Contents', []):
-            bct_list.append(content.get('Key'))
-        return bct_list
+        files = [x['Key'] for x in res.get('Contents', [])]
+        if not recursive:
+            return files
+        for x in res.get('CommonPrefixes', []):
+            prefix = x['Prefix']
+            files.extend(self.get_files_by_prefix(bucket_name, prefix))
+        return files
 
     def create_bucket(self, bucket_name):
         res = self.client.create_bucket(Bucket=bucket_name)
