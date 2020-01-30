@@ -25,7 +25,7 @@ class Kafka(TunneledPlugin):
         self.DNS_NAME = 'kafka.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'kafka.default.svc.cluster.local'
         self.PORT = 9092
         self.start_tunnel(self.DNS_NAME, self.PORT)
-        self.kafka_config = {'bootstrap.servers': f"{self.DNS_NAME}:{self.local_bind_port}", 'group.id': "automation-group",
+        self.kafka_config = {'bootstrap.servers': f"{self.DNS_NAME}:{self.PORT}", 'group.id': "automation-group",
                              'session.timeout.ms': 6000, 'auto.offset.reset': 'earliest'}
         self._kafka_admin = None
         self._c = None
