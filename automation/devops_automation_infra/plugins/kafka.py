@@ -22,9 +22,13 @@ class Kafka(TunneledPlugin):
     3. via containerize script which will add previous line to container hosts file"""
     def __init__(self, host):
         super().__init__(host)
+        with open('/etc/hosts', 'r+') as f:
+            content = f.read()
+            f.seek(0, 0)
+            f.write(f'127.0.0.1    kafka.tls.ai\n{content}')
         self.DNS_NAME = 'kafka.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'kafka.default.svc.cluster.local'
         self.PORT = 9092
-        self.start_tunnel(self.DNS_NAME, self.PORT)
+        self.start_tunnel(self.DNS_NAME, self.PORT, force_same_port=True)
         self.kafka_config = {'bootstrap.servers': f"{self.DNS_NAME}:{self.local_bind_port}", 'group.id': "automation-group",
                              'session.timeout.ms': 6000, 'auto.offset.reset': 'earliest'}
         self._kafka_admin = None
@@ -65,11 +69,6 @@ class Kafka(TunneledPlugin):
             try:
                 f.result()  # The result itself is None
                 logging.info("Topic {} created".format(topic))
-                return True
-            except KafkaException:
-                # TODO: validate this exception is thrown only when topic exists and not in other cases
-                # Othewise can add check before trying to create it...
-                logging.exception("topic already exists")
                 return True
             except Exception as e:
                 logging.exception("Failed to create topic {}: {}".format(topic, e))
@@ -166,8 +165,19 @@ plugins.register('Kafka', Kafka)
 @hardware_config(hardware={"host": {}})
 def test_basic(base_config):
     kafka = base_config.hosts.host.Kafka
+    topics = kafka.get_topics()
+    logging.info(f"topics: {topics}")
+    assert len(topics)
     kafka.create_topic(automation_tests_topic)
+    time.sleep(5)
+    topics = kafka.get_topics()
+    logging.info(f"topics2: {topics}")
+    assert automation_tests_topic in topics.keys()
     for i in range(10):
         kafka.put_message(automation_tests_topic, f'key{random.randint(0, 10)}', f"test {random.randint(10, 100)}")
 
+    logging.info("emptying topic")
     kafka.empty([automation_tests_topic])
+    logging.info("deleting topic")
+    kafka.delete_topic(automation_tests_topic)
+    logging.info("success")
