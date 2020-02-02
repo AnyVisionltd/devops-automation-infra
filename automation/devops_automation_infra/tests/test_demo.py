@@ -46,7 +46,7 @@ def test_memsql_seaweed_together(base_config):
 
 @hardware_config(hardware={"host": {}})
 def test_consul_get_services(base_config):
-    _, services_dict = base_config.hosts.host.Consul.get_services()
+    services_dict = base_config.hosts.host.Consul.get_services()
     assert len(services_dict) > 0
     assert 'camera-service' in services_dict
     put_key, put_val = ("test_key", "test_val")
@@ -59,7 +59,7 @@ def test_consul_get_services(base_config):
 @hardware_config(hardware={"host": {}})
 def test_kafka_functionality(base_config):
     topics = base_config.hosts.host.Kafka.get_topics()
-    assert len(topics.topics) > 0
+    assert len(topics) > 0
     success = base_config.hosts.host.Kafka.create_topic('oris_new_topic')
     assert success
     time.sleep(5)
