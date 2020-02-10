@@ -17,6 +17,9 @@ class Consul(TunneledPlugin):
     def get_services(self):
         return self._consul.catalog.services()[1]
 
+    def check_service_health(self, service_name):
+        return self._consul.health.service(service_name)
+
     def put_key(self, key, val):
         res = self._consul.kv.put(key, val)
         return res
