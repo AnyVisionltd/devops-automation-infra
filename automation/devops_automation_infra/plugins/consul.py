@@ -28,5 +28,10 @@ class Consul(TunneledPlugin):
         res = self._consul.kv.get(key)[1]['Value']
         return res
 
+    def is_healthy(self, service_name):
+        for item in self._consul.health.service(service_name)[1]:
+            if item["Checks"][0]['Status'] != 'passing' and item["Checks"][1]['Status'] != 'passing':
+                return False
+        return True
 
 plugins.register('Consul', Consul)
