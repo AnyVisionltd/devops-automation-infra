@@ -24,6 +24,11 @@ class Consul(TunneledPlugin):
         res = self._consul.kv.put(key, val)
         return res
 
+    def update_key_value(self, key, val):
+        self._consul.kv.delete(key, recurse=False)
+        res = self._consul.kv.put(key, val)
+        return res
+
     def get_key(self, key):
         res = self._consul.kv.get(key)[1]['Value']
         return res
