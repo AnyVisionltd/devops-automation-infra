@@ -28,5 +28,9 @@ class Consul(TunneledPlugin):
         res = self._consul.kv.get(key)[1]['Value']
         return res
 
+    def delete_key(self, key, recurse=None):
+        res = self._consul.kv.delete(key, recurse=recurse)
+        return res
 
 plugins.register('Consul', Consul)
+
