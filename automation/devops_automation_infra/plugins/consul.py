@@ -17,8 +17,12 @@ class Consul(TunneledPlugin):
     def get_services(self):
         return self._consul.catalog.services()[1]
 
-    def check_service_health(self, service_name):
-        return self._consul.health.service(service_name)
+    def get_service_nodes(self, service_name):
+        return self._consul.catalog.service(service_name)[1]
+
+    def is_healthy_node(self, node_name):
+        checks = self._consul.health.node(node_name)
+        return "critical" not in [check["Status"] for check in checks[1]]
 
     def put_key(self, key, val):
         res = self._consul.kv.put(key, val)
