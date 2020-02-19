@@ -53,5 +53,14 @@ class Memsql(TunneledPlugin):
             res = cursor.fetchone()
         return res['count']
 
+    def truncate(self, table):
+        truncate_commands = self.fetch_all(
+            f"""select concat('truncate table ', TABLE_SCHEMA, '.', TABLE_NAME) as truncate_command
+            from information_schema.tables t 
+            where TABLE_SCHEMA in ({table})
+            and TABLE_NAME not in ('DATABASECHANGELOG', 'DATABASECHANGELOGLOCK'); """)
+        for command_dict in truncate_commands:
+            self.upsert(command_dict['truncate_command'])
+
 
 plugins.register('Memsql', Memsql)
