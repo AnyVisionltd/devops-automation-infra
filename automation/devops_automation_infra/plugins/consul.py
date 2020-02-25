@@ -20,10 +20,11 @@ class Consul(TunneledPlugin):
     def get_service_nodes(self, service_name):
         return self._consul.catalog.service(service_name)[1]
 
-    def is_healthy_node(self, node):
-        for node_check in self._consul.health.node(node["Node"])[1]:
-            if node_check['ServiceName'] == node['ServiceName']:
-                return "critical" not in node_check["Status"]
+    def is_healthy(self, service_name, instance_name):
+        nodes = self._consul.health.service(service_name)[1]
+        for node in nodes:
+            if node["Service"]["ID"] == instance_name:
+                return "critical" not in [check["Status"] for check in node["Checks"]]
         return False
 
     def put_key(self, key, val):
@@ -42,6 +43,13 @@ class Consul(TunneledPlugin):
     def delete_key(self, key, recurse=None):
         res = self._consul.kv.delete(key, recurse=recurse)
         return res
+
+    def register_service(self, name, service_id, address, port, check):
+        res = self._consul.agent.service.register(name=name, service_id=service_id, address=address, port=port, check=check)
+        return res
+
+    def ping_ttl_check(self, check_id):
+        self._consul.agent.check.ttl_pass(check_id=check_id)
 
 plugins.register('Consul', Consul)
 
