@@ -24,7 +24,7 @@ class Postgresql(TunneledPlugin):
         connection = psycopg2.connect(host='localhost',
                                      port=self.local_bind_port,
                                      user='anv_admin',
-                                     password='',
+                                     password='password',
                                      database = 'anv_db')
 
         return connection
