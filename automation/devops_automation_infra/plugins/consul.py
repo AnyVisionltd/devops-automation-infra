@@ -13,6 +13,9 @@ class Consul(TunneledPlugin):
         self.PORT = 8500
         self.start_tunnel(self.DNS_NAME, self.PORT)
         self._consul = consul.Consul("localhost", self.local_bind_port)
+        self.DEFAULT_KEY = "DEFAULT"
+        self.OVERRIDE_KEY = "OVERRIDE"
+        self.APPLICATION_KEY = "APPLICATION"
 
     def get_services(self):
         return self._consul.catalog.services()[1]
