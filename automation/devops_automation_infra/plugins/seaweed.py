@@ -9,7 +9,7 @@ import os
 class Seaweed(TunneledPlugin):
     def __init__(self, host):
         super().__init__(host)
-        self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'seaweedfs-s3-localnode.default.svc.cluster.local'
+        self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-s3-localnode.default.svc.cluster.local'
         self.PORT = 8333
         self._client = None
 

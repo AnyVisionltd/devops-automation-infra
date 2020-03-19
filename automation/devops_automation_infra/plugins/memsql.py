@@ -9,7 +9,7 @@ from pytest_automation_infra import helpers
 class Memsql(TunneledPlugin):
     def __init__(self, host):
         super().__init__(host)
-        self.DNS_NAME = 'memsql.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'memsql.default.svc.cluster.local'
+        self.DNS_NAME = 'memsql.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'memsql.default.svc.cluster.local'
         self.PORT = 3306
         self._connection = None
 
@@ -21,10 +21,11 @@ class Memsql(TunneledPlugin):
 
     def _get_connection(self):
         self.start_tunnel(self.DNS_NAME, self.PORT)
+        memsql_password = "password" if not helpers.is_k8s(self._host.SshDirect) else self._host.SshDirect.execute("kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
         connection = pymysql.connect(host='localhost',
                                      port=self.local_bind_port,
                                      user='root',
-                                     password='password',
+                                     password=memsql_password,
                                      cursorclass=pymysql.cursors.DictCursor)
 
         return connection

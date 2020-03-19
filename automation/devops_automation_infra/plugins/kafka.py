@@ -26,7 +26,7 @@ class Kafka(TunneledPlugin):
             content = f.read()
             f.seek(0, 0)
             f.write(f'127.0.0.1    kafka.tls.ai\n{content}')
-        self.DNS_NAME = 'kafka.tls.ai' if not helpers.is_k8s(self._host.SSH) else 'kafka.default.svc.cluster.local'
+        self.DNS_NAME = 'kafka.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'kafka-cluster-kafka-brokers'
         self.PORT = 9092
         self.start_tunnel(self.DNS_NAME, self.PORT, force_same_port=True)
         self.kafka_config = {'bootstrap.servers': f"{self.DNS_NAME}:{self.local_bind_port}", 'group.id': "automation-group",
