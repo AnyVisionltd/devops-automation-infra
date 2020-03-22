@@ -89,6 +89,7 @@ class Kafka(TunneledPlugin):
             msg = self.consumer.poll(timeout=1)
             if msg is not None:
                 list_of_msg.append(msg)
+        self.consumer.unsubscribe()
         return list_of_msg
 
     def consume_iter(self, topics, timeout=None, commit=False):
@@ -122,6 +123,7 @@ class Kafka(TunneledPlugin):
         except Exception as e:
             logging.exception(f"Error in consume_iter")
         finally:
+            self.consumer.unsubscribe()
             logging.info(f"Stopping to consume topics {topics}")
 
     def parse_message(self, msg):
