@@ -5,6 +5,7 @@ import pytest
 
 import requests
 
+from automation_infra.plugins.base_plugin import TunneledPlugin
 from automation_infra.utils.waiter import wait_for_predicate_nothrow, wait_for_predicate
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
@@ -12,11 +13,31 @@ from pytest_automation_infra import helpers, determine_scope
 from pytest_automation_infra.helpers import hardware_config
 
 
+# TODO: Add docker register to rancher.
+# TODO: Run in with sshtunnel
+
 class Rancher(object):
     RANCHER_BASE_URL = "https://rancher.anv"
 
     def __init__(self, host):
         self._host = host
+        self.token = self.token()
+        self.auth_header = {"Authorization": f"Bearer {self.token}"}
+        # super().__init__(host)
+        # with open('/etc/hosts', 'r+') as f:
+        #     content = f.read()
+        #     f.seek(0, 0)
+        #     f.write(f'127.0.0.1    rancher.anv\n{content}')
+        # self.DNS_NAME = 'rancher.anv'
+        # self.PORT = 443
+        # self.start_tunnel(self.DNS_NAME, self.PORT, force_same_port=True)
+
+    # def tunneled_temp_token(self):
+    #     payload = {"username": "admin", "password": "admin", "ttl": 60000}
+    #     response = requests.post(url=f"rancher.anv:{self.local_bind_port}/v3-public/localProviders/local?action=login",
+    #                              data=json.dumps(payload),
+    #                              verify=False)
+    #     return response.json()['token']
 
     def _generate_temp_token(self):
         payload = {"username": "admin", "password": "admin", "ttl": 60000}
@@ -25,22 +46,46 @@ class Rancher(object):
                             verify=False)
         return res.json()['token']
 
-    def _generate_permanent_token(self, token):
+    def project_id(self):
+        res = requests.get("https://rancher.anv/v3/projects", headers=self.auth_header, verify=False)
+        assert res.status_code == 200
+        projects = res.json()['data']
+        return [project['id'] for project in projects if project['name'] == 'Default'][0]
+
+    def token(self):
+        temp_token = self._generate_temp_token()
         payload = {"type": "token", "description": "automation"}
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = {"Authorization": f"Bearer {temp_token}"}
         res = requests.post(url=f"https://rancher.anv/v3/token",
                             data=json.dumps(payload),
                             headers=headers,
                             verify=False)
+        if not self.token:
+            self.token = res.json()["token"]
         return res.json()['token']
 
-    def login(self):
-        temp_token = self._generate_temp_token()
-        perma_token = self._generate_permanent_token(temp_token)
-        cmd = f"sudo gravity exec rancher login {self.RANCHER_BASE_URL} --token {perma_token} --skip-verify"
+    def cli_login(self):
+        cmd = f"sudo gravity exec rancher login {self.RANCHER_BASE_URL} --token {self.token()} --skip-verify"
         res = self._host.SshDirect.execute(cmd)
         # Check login was successful
         assert "Saving config to" in res
+
+    def add_catalog(self,
+                    url="https://chart.tls.ai/pipeline-core",
+                    branch="master",
+                    name="anyvision",
+                    username="anyvision",
+                    password="Any4Vision!"):
+        project_id = self.project_id()
+        data = {"type": "projectcatalog", "kind": "helm", "branch": branch, "projectId": project_id,
+                "url": url, "name": name, "username": username,
+                "password": password}
+        res = requests.post("https://rancher.anv/v3/projectcatalog",
+                            headers=self.auth_header,
+                            data=json.dumps(data),
+                            verify=False)
+        # 409 is ok since it means the  catalog already exists
+        assert res.status_code == 201 or res.status_code == 409
 
     def install_app(self,
                     app_name,
@@ -80,18 +125,15 @@ class Rancher(object):
 plugins.register('Rancher', Rancher)
 
 
-# @pytest.fixture(scope=determine_scope, autouse=True)
-# def clean_up_core_p(base_config):
-#     rancher = base_config.hosts.host1.Rancher
-#     rancher.delete_app(app_name="core-app")
-#     rancher.delete_app(app_name="core-init")
-#     rancher.delete_app(app_name="core-data")
-
 @hardware_config(hardware={"host1": {}})
 def test(base_config):
-    base_config.hosts.host1.Rancher.login()
-    wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-data"),
-                       timeout=300)
-    wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-init"), timeout=30)
-    wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-app"), timeout=120,
-                       interval=10)
+    # res = requests.get("https://rancher.anv/v3/catalogs", verify=False)
+
+    # base_config.hosts.host1.Rancher.login()
+    base_config.hosts.host1.Rancher.add_catalog()
+
+    # wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-data"),
+    #                    timeout=300)
+    # wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-init"), timeout=30)
+    # wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-app"), timeout=120,
+    #                    interval=10)

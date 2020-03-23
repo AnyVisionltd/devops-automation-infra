@@ -6,7 +6,7 @@ from devops_automation_infra.plugins.rancher import Rancher
 from pytest_automation_infra.helpers import hardware_config
 
 
-@pytest.fixture(scope=determine_scope, autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def clean_up_core_product(base_config):
     rancher = base_config.hosts.host1.Rancher
     wait_for_predicate(lambda: rancher.delete_app(app_name="core-app"), timeout=30)
@@ -20,7 +20,7 @@ def clean_up_core_product(base_config):
 
 def install_core_project_v2(base_config):
     rancher = base_config.hosts.host1.Rancher
-    rancher.login()
+    rancher.cli_login()
     wait_for_predicate(lambda: rancher.install_app(app_name="core-data"), timeout=300)
     wait_for_predicate(lambda: rancher.install_app(app_name="core-init"), timeout=300)
     wait_for_predicate(lambda: rancher.install_app(app_name="core-app"), timeout=300,
