@@ -14,7 +14,7 @@ from pytest_automation_infra.helpers import hardware_config
 
 # TODO: Add docker register to rancher.
 # TODO: Run in with sshtunnel
-# TODO: Decide wether tokeep the current init
+# TODO: Decide wether to keep the current init
 
 class Rancher(object):
 
