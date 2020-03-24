@@ -1,10 +1,10 @@
 import logging
+
 from automation_infra.utils.waiter import wait_for_predicate, wait_for_predicate_nothrow
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
 from devops_automation_infra.plugins.power import Power
 from devops_automation_infra.plugins.gravity import Gravity
-from devops_automation_infra.plugins.helm import Helm
 from devops_automation_infra.plugins.k8s import K8s
 from devops_automation_infra.utils.k8s_utils import create_deployment_with_replicas
 from devops_automation_infra.utils.health_check import host_is_active
@@ -20,6 +20,7 @@ def pod_is_live(host, ip, port, timeout=10):
 
 @hardware_config(hardware={"host1": {}, "host2": {}})
 def test_cluster_network_master_restart(base_config,
+                                        clean_up_all_deployments_and_svcs,
                                         amount_of_replicas=100,
                                         docker_image_name='gcr.io/hello-minikube-zero-install/hello-node',
                                         deployment_name="test"):
