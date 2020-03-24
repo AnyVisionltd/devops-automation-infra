@@ -5,7 +5,6 @@ import pytest
 
 import requests
 
-from automation_infra.plugins.base_plugin import TunneledPlugin
 from automation_infra.utils.waiter import wait_for_predicate_nothrow, wait_for_predicate
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
@@ -40,6 +39,7 @@ class Rancher(object):
     #                              verify=False)
     #     return response.json()['token']
 
+
     def _generate_temp_token(self):
         payload = {"username": "admin", "password": "admin", "ttl": 60000}
         res = requests.post(url=f"https://rancher.anv/v3-public/localProviders/local?action=login",
@@ -73,6 +73,7 @@ class Rancher(object):
         # Check login was successful
         assert "Saving config to" in res
 
+
     def delete_catalog(self, catalog_name):
         project_details = self.project_details()
         catalog_to_delete = "p-krs5d:anyvision"
@@ -97,6 +98,7 @@ class Rancher(object):
                             verify=False)
         # 409 is ok since it means the  catalog already exists
         assert res.status_code == 201 or res.status_code == 409
+
 
     def install_app(self,
                     app_name,
