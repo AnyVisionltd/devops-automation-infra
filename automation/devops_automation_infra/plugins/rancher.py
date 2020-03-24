@@ -15,14 +15,15 @@ from pytest_automation_infra.helpers import hardware_config
 
 # TODO: Add docker register to rancher.
 # TODO: Run in with sshtunnel
+# TODO: Decide wether tokeep the current init
 
 class Rancher(object):
+
     RANCHER_BASE_URL = "https://rancher.anv"
 
     def __init__(self, host):
         self._host = host
-        self.token = self.token()
-        self.auth_header = {"Authorization": f"Bearer {self.token}"}
+        self.auth_header = {"Authorization": f"Bearer {self.token()}"}
         # super().__init__(host)
         # with open('/etc/hosts', 'r+') as f:
         #     content = f.read()
@@ -44,13 +45,14 @@ class Rancher(object):
         res = requests.post(url=f"https://rancher.anv/v3-public/localProviders/local?action=login",
                             data=json.dumps(payload),
                             verify=False)
+        assert res.status_code == 201
         return res.json()['token']
 
-    def project_id(self):
+    def project_details(self):
         res = requests.get("https://rancher.anv/v3/projects", headers=self.auth_header, verify=False)
         assert res.status_code == 200
         projects = res.json()['data']
-        return [project['id'] for project in projects if project['name'] == 'Default'][0]
+        return [project for project in projects if project['name'] == 'Default'][0]
 
     def token(self):
         temp_token = self._generate_temp_token()
@@ -60,6 +62,7 @@ class Rancher(object):
                             data=json.dumps(payload),
                             headers=headers,
                             verify=False)
+        assert  res.status_code == 201
         if not self.token:
             self.token = res.json()["token"]
         return res.json()['token']
@@ -70,13 +73,21 @@ class Rancher(object):
         # Check login was successful
         assert "Saving config to" in res
 
+    def delete_catalog(self, catalog_name):
+        project_details = self.project_details()
+        catalog_to_delete = "p-krs5d:anyvision"
+        res = requests.delete(f"https://rancher.anv/v3/projectCatalogs/{catalog_to_delete}")
+
+
+
     def add_catalog(self,
                     url="https://chart.tls.ai/pipeline-core",
                     branch="master",
                     name="anyvision",
                     username="anyvision",
                     password="Any4Vision!"):
-        project_id = self.project_id()
+        project_details = self.project_details()
+        project_id = project_details['id']
         data = {"type": "projectcatalog", "kind": "helm", "branch": branch, "projectId": project_id,
                 "url": url, "name": name, "username": username,
                 "password": password}
@@ -129,7 +140,7 @@ plugins.register('Rancher', Rancher)
 def test(base_config):
     # res = requests.get("https://rancher.anv/v3/catalogs", verify=False)
 
-    # base_config.hosts.host1.Rancher.login()
+    base_config.hosts.host1.Rancher.cli_login()
     base_config.hosts.host1.Rancher.add_catalog()
 
     # wait_for_predicate(lambda: base_config.hosts.host1.Rancher.install_app(app_name="core-data"),
