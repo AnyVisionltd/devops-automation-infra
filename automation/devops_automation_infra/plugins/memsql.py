@@ -1,5 +1,7 @@
+import logging
 from contextlib import closing
 import pymysql
+from pymysql import InternalError
 
 from infra.model import plugins
 from automation_infra.plugins.base_plugin import TunneledPlugin
@@ -61,7 +63,14 @@ class Memsql(TunneledPlugin):
             where TABLE_SCHEMA = '{table}'
             and TABLE_NAME not in ('DATABASECHANGELOG', 'DATABASECHANGELOGLOCK'); """)
         for command_dict in truncate_commands:
-            self.upsert(command_dict['truncate_command'])
+            try:
+                logging.info(f"running command {command_dict['truncate_command']}")
+                self.upsert(command_dict['truncate_command'])
+            except InternalError as e:
+                #self.fetch_all("")
+                #import ipdb; ipdb.set_trace()
+                command_dict['truncate_command']
+                logging.info("failed to truncate table")
 
 
 plugins.register('Memsql', Memsql)
