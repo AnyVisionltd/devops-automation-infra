@@ -20,7 +20,6 @@ def pod_is_live(host, ip, port, timeout=10):
 
 @hardware_config(hardware={"host1": {}, "host2": {}})
 def test_cluster_network_master_restart(base_config,
-                                        clean_up_all_deployments_and_svcs,
                                         amount_of_replicas=100,
                                         docker_image_name='gcr.io/hello-minikube-zero-install/hello-node',
                                         deployment_name="test"):
