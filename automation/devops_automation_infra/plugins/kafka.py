@@ -19,14 +19,14 @@ automation_tests_topic = 'anv.automation.topic1'
 class Kafka(TunneledPlugin):
     def __init__(self, host):
         super().__init__(host)
-        self._host.SSH.put('rpyc-kafka-server.py', '/')
+        self._host.SSH.put('../devops-automation-infra/automation/devops_automation_infra/plugins/rpyc-kafka-server.py', '/')
         self._host.SSH.execute('apt install -y python3-pip && pip3 install rpyc confluent_kafka')
         self._host.SSH.execute('nohup python3 -u /rpyc-kafka-server.py </dev/null >/dev/null 2>&1 & ')
         time.sleep(5)
         self._conn = rpyc.connect(host.ip, 18861, config={"allow_all_attrs": True})
         self.PORT = '9092'
         self.HOST = 'kafka-cluster-kafka-brokers.default.svc.cluster.local'
-        self._kafka_admin = self._conn.root.init_kafka(self.HOST, self.PORT, offset='earliest')
+        self._kafka_admin = self._conn.root.set_kafka_config(self.HOST, self.PORT, offset='earliest')
         self._c = None
         self._p = None
 
@@ -62,7 +62,7 @@ class Kafka(TunneledPlugin):
         return None
 
     def new_topic(self):
-        topic = self._conn.root.create_topic_object('chen')
+        topic = self._conn.root.create_topic_object('anv.automation.topic2')
         topics = self._conn.root.create_list(topic)
         fs = self.admin.create_topics(topics)
         for topic, f in fs.items():
@@ -92,9 +92,15 @@ plugins.register('Kafka', Kafka)
 
 @hardware_config(hardware={"host": {}})
 def test_basic(base_config):
+    #import ipdb; ipdb.set_trace()
     kafka = base_config.hosts.host.Kafka
-    kafka.old_new_topics()
+    # kafka.old_new_topics()
+    # t_names = kafka.topic_names()
+    #assert 'anv.automation.topic1' in t_names
     kafka.new_topic()
+    t_names = kafka.topic_names()
+    assert 'anv.automation.topic2' in t_names
+
 
     # topics = kafka.get_topics()
     # msg = kafka.get_message(['anv.tracks.collate.new-tracks'])

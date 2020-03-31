@@ -7,31 +7,36 @@ from confluent_kafka.admin import AdminClient, NewTopic, KafkaException
 class KafkaServer(rpyc.Service):
     def __init__(self):
         self._kafka_config = None
+        self._consumer = None
+        self._producer = None
 
-    def init_kafka(self, kafka_host, kafka_port, offset):
-        if self._kafka_config is None:
-            self._kafka_config = {'bootstrap.servers': f'{kafka_host}:{kafka_port}',
+    def set_kafka_config(self, kafka_host, kafka_port, offset):
+        self._kafka_config = {'bootstrap.servers': f'{kafka_host}:{kafka_port}',
                                    'group.id': "automation-group",
                                    'session.timeout.ms': 6000,
                                    'auto.offset.reset': offset}
-        kafka_admin = AdminClient(self._kafka_config)
-        return kafka_admin
 
-    def init_consumer(self):
-        return Consumer(self._kafka_config)
+    @property
+    def Admin(self):
+        if self._admin is None:
+            self._admin = AdminClient(self._kafka_config)
+        return self._admin
 
-    def init_producer(self):
-        return Producer(self._kafka_config)
+    @property
+    def Consumer(self):
+        if self._consumer is None:
+            self._consumer = Consumer(self._kafka_config)
+        return self._consumer
 
-    def kafka_new_topics(self, topic_name, num_partitions=3, replication_factor=1):  # this is an exposed method
-        topic = NewTopic(topic_name, num_partitions=num_partitions, replication_factor=replication_factor)
-        return [topic, ]
+    @property
+    def Producer(self):
+        if self._producer is None:
+            self._producer = Producer(self._kafka_config)
+        return self._producer
 
     @staticmethod
     def create_list(*args):
-        print(f'args {args} {type(args)}')
         list_of_topics = list(args)
-        print(f'list of topics {list_of_topics} {type(list_of_topics)}')
         return list_of_topics
 
     def create_topic_object(self, topic_name, num_partitions=3, replication_factor=1):
