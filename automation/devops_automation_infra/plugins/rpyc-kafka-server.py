@@ -1,7 +1,7 @@
 import rpyc
 from rpyc.utils.server import ThreadedServer
 from confluent_kafka import Consumer, Producer, TopicPartition
-from confluent_kafka.admin import AdminClient, NewTopic, KafkaException
+from confluent_kafka.admin import AdminClient, NewTopic
 
 
 class KafkaServer(rpyc.Service):
@@ -15,35 +15,40 @@ class KafkaServer(rpyc.Service):
         self._kafka_config = {'bootstrap.servers': f'{kafka_host}:{kafka_port}',
                                    'group.id': "automation-group",
                                    'session.timeout.ms': 6000,
-                                   'auto.offset.reset': offset,
-                                   'debug': 'broker,admin'}
+                                   'auto.offset.reset': offset}
 
     @property
-    def Admin(self):
+    def admin(self):
         if self._admin is None:
             self._admin = AdminClient(self._kafka_config)
         return self._admin
 
     @property
-    def Consumer(self):
+    def consumer(self):
         if self._consumer is None:
             self._consumer = Consumer(self._kafka_config)
         return self._consumer
 
     @property
-    def Producer(self):
+    def producer(self):
         if self._producer is None:
             self._producer = Producer(self._kafka_config)
         return self._producer
 
     @staticmethod
     def create_list(*args):
-        list_of_topics = list(args)
-        return list_of_topics
+        new_list = list(args)
+        return new_list
 
-    def create_topic_object(self, topic_name, num_partitions=3, replication_factor=1):
+    @staticmethod
+    def create_topic_object(topic_name, num_partitions=3, replication_factor=1):
         topic = NewTopic(topic_name, num_partitions=num_partitions, replication_factor=replication_factor)
         return topic
+
+    @staticmethod
+    def create_topic_partition_object(topic, partition, offset):
+        topic_partition = TopicPartition(topic=topic, partition=partition, offset=offset)
+        return topic_partition
 
 
 if __name__ == "__main__":
