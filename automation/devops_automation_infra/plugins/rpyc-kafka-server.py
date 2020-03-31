@@ -9,12 +9,14 @@ class KafkaServer(rpyc.Service):
         self._kafka_config = None
         self._consumer = None
         self._producer = None
+        self._admin = None
 
     def set_kafka_config(self, kafka_host, kafka_port, offset):
         self._kafka_config = {'bootstrap.servers': f'{kafka_host}:{kafka_port}',
                                    'group.id': "automation-group",
                                    'session.timeout.ms': 6000,
-                                   'auto.offset.reset': offset}
+                                   'auto.offset.reset': offset,
+                                   'debug': 'broker,admin'}
 
     @property
     def Admin(self):
