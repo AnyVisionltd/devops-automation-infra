@@ -28,7 +28,7 @@ def test_cluster_network_master_restart(base_config,
     base_config.hosts.host1.SshDirect.connect(timeout=60)
     create_deployment_with_replicas(base_config.hosts.host1, deployment_name, docker_image_name, amount_of_replicas)
     wait_for_predicate(
-        lambda: base_config.hosts.host1.K8s.get_ready_deployment_pods(deployment_name) == amount_of_replicas,
+        lambda: base_config.hosts.host1.K8s.number_ready_pods_in_deployment(deployment_name) == amount_of_replicas,
         timeout=300)
     base_config.hosts.host1.Power.reboot()
     # Check host has started again

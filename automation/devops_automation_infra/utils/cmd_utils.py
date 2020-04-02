@@ -9,3 +9,4 @@ def convert_kwargs_to_options_string(kwargs, format_with_equals_sign=False):
         return result_string
     except AttributeError:
         return kwargs
+

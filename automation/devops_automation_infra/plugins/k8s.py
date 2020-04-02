@@ -1,6 +1,8 @@
 import json
 import logging
 
+from automation_infra.utils.waiter import wait_for_predicate
+from devops_automation_infra.utils.k8s_utils import write_configmap_json_to_tmp_dir
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra import helpers
@@ -70,9 +72,6 @@ class K8s(object):
         res = self.get_pods()
         return len(res['items'])
 
-    def get_pods_using_selector(self, selector, selector_type="app"):
-        return self.get_pods(f"--selector={selector_type}={selector}")
-
     def get_deployment(self, name, **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs)
         return self.get(f"deployment {name}", options_string)
@@ -85,18 +84,13 @@ class K8s(object):
         options_string = convert_kwargs_to_options_string(kwargs, format_with_equals_sign=True)
         self.delete(f"deployment {name}", options_string)
 
-    def get_ready_deployment_pods(self, name):
-        try:
-            res = self.get_deployment(name)
-            return res['status']['readyReplicas']
-        # The readyReplicas value isn't initialized by the k8s api immediately after the adding
-        # of replicas so we need to wait for it to appear
-        except KeyError:
-            return 0
+
+    def replace_config_map(self, config_map_file_path):
+        self._host.SshDirect.execute(f"sudo gravity exec kubectl replace -f {config_map_file_path}")
 
     def get_deployments_pod_internal_ips(self, name):
         try:
-            res = self.get_pods_using_selector(selector=name)
+            res = self.get_pods_using_selector_labels(selector=name)
             # The place the PodIP is keept in k8s is different dependin on version
             if self.version >= "v1.17.0":
                 return [pod['status']['podIPs'][0]['ip'] for pod in res['items']]
@@ -105,5 +99,71 @@ class K8s(object):
         except KeyError as e:
             logging.error(f"Unable to get all deployments pods ips \n {e}")
 
+    def insert_kv_into_configmap(self, key_value, service):
+        configmap_name = self.configmap_name(service)
+        configmap_json = self.configmap_json(configmap_name)
+        updated_configmap_json = self.update_configmap(configmap_json, key_value)
+        self.deploy_configmap(updated_configmap_json, service)
+
+    def configmap_name(self, name):
+        configmaps_json = self.get_configmaps()
+        for configmap in configmaps_json['items']:
+            if name in configmap['metadata']['name']:
+                return configmap['metadata']['name']
+        logging.error("Failed to get configmap name")
+
+    def get_configmaps(self):
+        return self.get(resource="configmaps")
+
+    def configmap_json(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self.get(resource=f"configmaps {name}", options=options_string)
+
+    def update_configmap(self, configmap, kv):
+        for key, value in kv.items():
+            configmap['data'].update({f"{key.upper()}": value})
+        return configmap
+
+    def deploy_configmap(self, updated_configmap_json, service):
+        local_host_configmap_path = write_configmap_json_to_tmp_dir(
+            configmap_file_name=f"updated-configmap-{service}",
+            configmap_json=updated_configmap_json
+        )
+        self._host.SshDirect.put(local_host_configmap_path, remotedir="/tmp")
+        # /host is required to work with gravity mounted file system
+        configmap_host_under_test_path = f"/host{local_host_configmap_path}"
+        self.replace_config_map(configmap_host_under_test_path)
+        self.restart_pod_by_service_name(service)
+
+    def replace_config_map(self, config_map_file_path):
+        self._host.SshDirect.execute(f"sudo gravity exec kubectl replace -f {config_map_file_path}")
+
+    def restart_pod_by_service_name(self, service_name):
+        self.delete_pod_by_service_name(service_name)
+        wait_for_predicate(lambda: self.number_ready_pods_in_deployment(service_name) == 1)
+
+    def delete_pod_by_service_name(self, service_name, **kwargs):
+        service_name_selector_query = f"--selector=app=={service_name}"
+        options_string = convert_kwargs_to_options_string(kwargs)
+        self.delete(resource=f"pod {service_name_selector_query}", options=options_string)
+
+    def number_ready_pods_in_deployment(self, name):
+        try:
+            res = self.get_deployment(name)
+            return res['status']['readyReplicas']
+        # The readyReplicas value isn't initialized by the k8s api immediately after the adding
+        # of replicas so we need to wait for it to appear
+        except KeyError:
+            return 0
+
+    def get_pods_using_selector_labels(self, label_value, label_name="app"):
+        return self.get_pods(f"--selector={label_name}={label_value} --output json")
+
 
 plugins.register("K8s", K8s)
+
+
+def test_add_key_value_configmap(base_config):
+    k8s = base_config.hosts.host1.K8s
+    k8s.insert_kv_into_configmap(service="camera-service", key_value={"Omri": "Golan",
+                                                                      "ori":"hbertest"})
