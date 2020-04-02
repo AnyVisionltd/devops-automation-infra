@@ -93,5 +93,9 @@ class Seaweed(TunneledPlugin):
             result.append(obj['Key'])
         return result
 
+    def delete_file(self, bucket_name, file_name):
+        self.client.delete_object(Bucket=bucket_name, Key=file_name)
+        assert not self.file_exists(bucket_name, file_name)
+
 
 plugins.register('Seaweed', Seaweed)
