@@ -9,7 +9,7 @@ from pytest_automation_infra import helpers
 class Consul(TunneledPlugin):
     def __init__(self, host):
         super().__init__(host)
-        self.DNS_NAME = 'consul.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'consul.default.svc.cluster.local'
+        self.DNS_NAME = 'consul.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'consul-server.default.svc.cluster.local'
         self.PORT = 8500
         self.start_tunnel(self.DNS_NAME, self.PORT)
         self._consul = consul.Consul("localhost", self.local_bind_port)
