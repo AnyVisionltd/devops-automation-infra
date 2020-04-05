@@ -11,6 +11,8 @@ from infra.model import plugins
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
 
+TIMEOUT = 30
+
 
 class Kafka(TunneledPlugin):
     def __init__(self, host):
@@ -61,7 +63,7 @@ class Kafka(TunneledPlugin):
         self._host.SSH.execute('nohup python3 -u /rpyc-kafka-server.py </dev/null >/dev/null 2>&1 &')
         time.sleep(5)
 
-    def get_topics(self, timeout=10):
+    def get_topics(self, timeout=TIMEOUT):
         return self.admin.list_topics(timeout=timeout).topics
 
     def topic_names(self):
@@ -72,7 +74,7 @@ class Kafka(TunneledPlugin):
         topics = self._conn.root.create_list(*topics)
         self.consumer.subscribe(topics)
         for i in range(tries):
-            msg = self.consumer.poll(timeout=1)
+            msg = self.consumer.poll(timeout=TIMEOUT)
             if msg is not None:
                 self.consumer.unsubscribe()
                 return msg
@@ -83,7 +85,7 @@ class Kafka(TunneledPlugin):
         """ create topic if not exists """
         new_topic = self._conn.root.create_topic_object(name)
         topics = self._conn.root.create_list(new_topic)
-        fs = self.admin.create_topics(topics, request_timeout=30, operation_timeout=30)
+        fs = self.admin.create_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
         for topic, f in fs.items():
             try:
                 f.result()
@@ -95,7 +97,7 @@ class Kafka(TunneledPlugin):
 
     def delete_topic(self, topic):
         topics = self._conn.root.create_list(topic)
-        fs = self.admin.delete_topics(topics, request_timeout=30, operation_timeout=30)
+        fs = self.admin.delete_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
         for topic, f in fs.items():
             try:
                 f.result()
@@ -109,13 +111,13 @@ class Kafka(TunneledPlugin):
         self.consumer.subscribe(topics)
         list_of_msg = []
         for i in range(times):
-            msg = self.consumer.poll(timeout=1)
+            msg = self.consumer.poll(timeout=TIMEOUT)
             if msg is not None:
                 list_of_msg.append(msg)
         self.consumer.unsubscribe()
         return list_of_msg
 
-    def consume_iter(self, topics, timeout=None, commit=False):
+    def consume_iter(self, topics, timeout=TIMEOUT, commit=False):
         """ Generator - use Kafka consumer for receiving messages from the given *topics* list.
             Yield a tuple of each message key and value.
             If got a *timeout* argument - break the loop if passed the value in seconds, but did not
@@ -128,7 +130,8 @@ class Kafka(TunneledPlugin):
         last_ts = datetime.now()
         try:
             while (timeout is None) or ((datetime.now() - last_ts).seconds < timeout):
-                msg = self.consumer.poll(timeout=1)
+                msg = self.consumer.poll(timeout=timeout)
+
                 if msg is None:
                     continue
                 last_ts = datetime.now()
@@ -151,7 +154,7 @@ class Kafka(TunneledPlugin):
             self.consumer.unsubscribe()
             logging.info('Stopping to consume topics')
 
-    def empty(self, topics, timeout=10):
+    def empty(self, topics, timeout=TIMEOUT):
         self.consume_iter(topics, timeout=timeout, commit=True)
         time.sleep(5)
         assert self.get_message(topics) is None
