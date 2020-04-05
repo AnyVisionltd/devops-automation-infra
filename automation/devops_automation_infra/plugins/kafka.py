@@ -68,15 +68,18 @@ class Kafka(TunneledPlugin):
         topics = self.get_topics()
         return [k for k, v in topics.items()]
 
-    def get_message(self, topics, tries=3):
+    def subscribe(self, topics):
         topics = self._conn.root.create_list(*topics)
         self.consumer.subscribe(topics)
+
+    def unsubscribe(self, topics):
+        self.consumer.unsubscribe()
+
+    def get_message(self, topics, tries=3):
         for i in range(tries):
             msg = self.consumer.poll(timeout=1)
             if msg is not None:
-                self.consumer.unsubscribe()
                 return msg
-        self.consumer.unsubscribe()
         return None
 
     def create_topic(self, name):
@@ -105,14 +108,11 @@ class Kafka(TunneledPlugin):
                 logging.exception(f'Failed to delete topic {topic}: {str(e)}')
 
     def consume_messages_x_times(self, topics, times):
-        topics = self._conn.root.create_list(*topics)
-        self.consumer.subscribe(topics)
         list_of_msg = []
         for i in range(times):
             msg = self.consumer.poll(timeout=1)
             if msg is not None:
                 list_of_msg.append(msg)
-        self.consumer.unsubscribe()
         return list_of_msg
 
     def consume_iter(self, topics, timeout=None, commit=False):
@@ -123,8 +123,6 @@ class Kafka(TunneledPlugin):
             If the optional argument *commit* is true, commit each message consumed."""
 
         logging.info(f'Starting to consume message (timeout: {timeout}).')
-        topics = self._conn.root.create_list(*topics)
-        self.consumer.subscribe(topics)
         last_ts = datetime.now()
         try:
             while (timeout is None) or ((datetime.now() - last_ts).seconds < timeout):
@@ -148,10 +146,10 @@ class Kafka(TunneledPlugin):
         except Exception as e:
             logging.exception(f'Error in consume_iter {str(e)}')
         finally:
-            self.consumer.unsubscribe()
             logging.info('Stopping to consume topics')
 
     def empty(self, topics, timeout=10):
+        self.subscribe(topics)
         self.consume_iter(topics, timeout=timeout, commit=True)
         time.sleep(5)
         assert self.get_message(topics) is None
