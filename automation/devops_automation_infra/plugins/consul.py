@@ -1,3 +1,5 @@
+import logging
+
 import sshtunnel
 import consul
 from munch import Munch
@@ -53,6 +55,14 @@ class Consul(TunneledPlugin):
 
     def ping_ttl_check(self, check_id):
         self._consul.agent.check.ttl_pass(check_id=check_id)
+
+    def verify_functionality(self):
+        services = self.get_services()
+        assert 'camera-service' in services
+        self.put_key("Test/service/", "51")
+        assert int(self.get_key("Test/service/")) == 51
+        logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
+
 
 plugins.register('Consul', Consul)
 
