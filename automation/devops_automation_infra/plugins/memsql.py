@@ -72,5 +72,11 @@ class Memsql(TunneledPlugin):
                 command_dict['truncate_command']
                 logging.info("failed to truncate table")
 
+    def ping(self):
+        try:
+            return self.fetch_all("show databases")
+        except:
+            raise ConnectionError("Error connecting to Memsql db")
+
 
 plugins.register('Memsql', Memsql)
