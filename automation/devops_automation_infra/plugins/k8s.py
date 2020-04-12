@@ -90,7 +90,7 @@ class K8s(object):
 
     def get_deployments_pod_internal_ips(self, name):
         try:
-            res = self.get_pods_using_selector_labels(selector=name)
+            res = self.get_pods_using_selector_labels(label_value=name)
             # The place the PodIP is keept in k8s is different dependin on version
             if self.version >= "v1.17.0":
                 return [pod['status']['podIPs'][0]['ip'] for pod in res['items']]
