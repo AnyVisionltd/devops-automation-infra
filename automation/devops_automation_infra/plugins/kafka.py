@@ -10,6 +10,7 @@ from automation_infra.plugins.base_plugin import TunneledPlugin
 from infra.model import plugins
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
+from devops_automation_infra.utils import kafka as kafka_util
 
 TIMEOUT = 10
 
@@ -190,6 +191,54 @@ class Kafka(TunneledPlugin):
     def put_message(self, topic, key, msg):
         self.producer.produce(topic=topic, key=key, value=msg, callback=self.delivery_report)
         self.producer.poll(0)
+
+    def verify_functionality(self):
+        automation_tests_topic = 'anv.automation.topic1'
+        logging.info("getting topics")
+        kafka_util.init_topic(automation_tests_topic, self)
+        kafka_util.init_consumer(automation_tests_topic, self)
+
+        num_messages = 10
+
+        kafka_util.produce_messages(num_messages, automation_tests_topic, self)
+        logging.info("testing consume_all:")
+        consumed_messages = self.consume_all_messages(automation_tests_topic)
+        logging.info(f"got {len(consumed_messages)} messages!")
+        assert len(consumed_messages) == num_messages, "number of consumed messages != number of produced messages"
+        logging.info(f"consume iter functioning properly {[msg.value() for msg in consumed_messages]}")
+
+        kafka_util.deinit_topic(automation_tests_topic, self)
+
+        logging.info(f"<<<<<<<<<<KAFKA PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>")
+
+    def verify_functionality_full(self):
+        automation_tests_topic = 'anv.automation.topic1'
+        logging.info("getting topics")
+        kafka_util.init_topic(automation_tests_topic, self)
+        kafka_util.init_consumer(automation_tests_topic, self)
+
+        num_messages = 10
+
+        kafka_util.produce_messages(num_messages, automation_tests_topic, self)
+        logging.info("testing consume_all:")
+        consumed_messages = self.consume_all_messages(automation_tests_topic)
+        logging.info(f"got {len(consumed_messages)} messages!")
+        assert len(consumed_messages) == num_messages, "number of consumed messages != number of produced messages"
+        logging.info(f"consume iter functioning properly {[msg.value() for msg in consumed_messages]}")
+
+        kafka_util.produce_messages(num_messages, automation_tests_topic, self)
+        logging.info("testing consume_x_messages:")
+        consumed_messages = self.consume_x_messages(automation_tests_topic, num_messages / 2)
+        assert len(consumed_messages) == num_messages / 2, "number of consumed messages != number of produced messages"
+        logging.info(f"consume_x_messages functioning properly. messages: {[msg.value() for msg in consumed_messages]}")
+
+        logging.info("testing kafka.empty:")
+        self.empty(automation_tests_topic)
+        logging.info("empty functioning properly.")
+
+        kafka_util.deinit_topic(automation_tests_topic, self)
+
+        logging.info(f"<<<<<<<<<<KAFKA PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>")
 
 
 plugins.register('Kafka', Kafka)
