@@ -1,6 +1,8 @@
 import json
 import logging
 
+import pytest
+
 from automation_infra.utils.waiter import wait_for_predicate
 from devops_automation_infra.utils.k8s_utils import write_configmap_json_to_tmp_dir
 from infra.model import plugins
@@ -84,7 +86,6 @@ class K8s(object):
         options_string = convert_kwargs_to_options_string(kwargs, format_with_equals_sign=True)
         self.delete(f"deployment {name}", options_string)
 
-
     def replace_config_map(self, config_map_file_path):
         self._host.SshDirect.execute(f"sudo gravity exec kubectl replace -f {config_map_file_path}")
 
@@ -140,7 +141,7 @@ class K8s(object):
 
     def restart_pod_by_service_name(self, service_name):
         self.delete_pod_by_service_name(service_name)
-        wait_for_predicate(lambda: self.number_ready_pods_in_deployment(service_name) == 1)
+        wait_for_predicate(lambda: self.number_ready_pods_in_deployment(service_name) == 1, timeout=30)
 
     def delete_pod_by_service_name(self, service_name, **kwargs):
         service_name_selector_query = f"--selector=app=={service_name}"
@@ -166,4 +167,4 @@ plugins.register("K8s", K8s)
 def test_add_key_value_configmap(base_config):
     k8s = base_config.hosts.host1.K8s
     k8s.insert_kv_into_configmap(service="camera-service", key_value={"Omri": "Golan",
-                                                                      "ori":"hbertest"})
+                                                                              "ori": "hbertest"})
