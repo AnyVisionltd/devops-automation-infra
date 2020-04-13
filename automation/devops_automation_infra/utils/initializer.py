@@ -5,6 +5,8 @@ from devops_automation_infra.plugins.seaweed import Seaweed
 from devops_automation_infra.plugins.kafka import Kafka
 from devops_automation_infra.plugins.consul import Consul
 
+from devops_automation_infra.utils import consul as consul_util
+
 
 def init_plugins(host):
     """This method inits devops-automation-infra plugins (if necessary) so that when
@@ -14,3 +16,5 @@ def init_plugins(host):
     host.Consul
     host.Kafka
     host.Seaweed
+    consul_util.backup_consul_keys(host)
+    host.clean_between_tests()
