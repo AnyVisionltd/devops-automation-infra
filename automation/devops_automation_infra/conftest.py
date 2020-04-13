@@ -1,3 +1,4 @@
+import concurrent
 import logging
 import pytest
 
@@ -16,11 +17,15 @@ def clean_up_all_deployments_and_svcs(base_config):
     k8s.delete_svc(svc_name="", all=True)
 
 
+def setup(host):
+    infra_initializer.init_plugins(host)
+    devops_initializer.init_plugins(host)
+    host.clean_between_tests()
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_setup(item):
     logging.info("running dev-ops pre-test cleaner.")
     hosts = item.funcargs['base_config'].hosts
-    for name, host in hosts.items():
-        # multi-threaded
-        infra_initializer.init_plugins(host)
-        devops_initializer.init_plugins(host)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        executor.map(setup, [host for name, host in hosts.items()])
