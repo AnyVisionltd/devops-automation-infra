@@ -56,11 +56,11 @@ class Memsql(TunneledPlugin):
             res = cursor.fetchone()
         return res['count']
 
-    def truncate(self, table):
+    def truncate(self, schema):
         truncate_commands = self.fetch_all(
             f"""select concat('truncate table ', TABLE_SCHEMA, '.', TABLE_NAME) as truncate_command
             from information_schema.tables t 
-            where TABLE_SCHEMA = '{table}'
+            where TABLE_SCHEMA = '{schema}'
             and TABLE_NAME not in ('DATABASECHANGELOG', 'DATABASECHANGELOGLOCK'); """)
         for command_dict in truncate_commands:
             try:
@@ -71,6 +71,12 @@ class Memsql(TunneledPlugin):
                 #import ipdb; ipdb.set_trace()
                 command_dict['truncate_command']
                 logging.info("failed to truncate table")
+
+    def ping(self):
+        try:
+            return self.fetch_all("show databases")
+        except:
+            raise ConnectionError("Error connecting to Memsql db")
 
 
 plugins.register('Memsql', Memsql)

@@ -1,3 +1,5 @@
+import logging
+
 from infra.model import plugins
 from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
@@ -96,6 +98,14 @@ class Seaweed(TunneledPlugin):
     def delete_file(self, bucket_name, file_name):
         self.client.delete_object(Bucket=bucket_name, Key=file_name)
         assert not self.file_exists(bucket_name, file_name)
+
+    def verify_functionality(self):
+        self.create_bucket("test_bucket")
+        self.upload_file_to_bucket("media/phase_1.png", "test_bucket", "media/phase_1.png")
+        bucket_files = self.get_bucket_files('test_bucket')
+        assert bucket_files == ['media/phase_1.png']
+        self.delete_bucket("test_bucket")
+        logging.info(f"<<<<<<<<<<<<<SEAWEED PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
 
 plugins.register('Seaweed', Seaweed)
