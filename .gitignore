@@ -212,3 +212,5 @@ dmypy.json
 
 # End of https://www.gitignore.io/api/linux,python,pycharm
 *.log
+
+.vscode/
