@@ -7,6 +7,7 @@ from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra import helpers
 from devops_automation_infra.utils.cmd_utils import convert_kwargs_to_options_string
+from pytest_automation_infra.helpers import hardware_config
 
 
 class K8s(object):
@@ -159,11 +160,47 @@ class K8s(object):
     def get_pods_using_selector_labels(self, label_value, label_name="app"):
         return self.get_pods(f"--selector={label_name}={label_value} --output json")
 
+    def scale_pipeng(self, replicas=1):
+        # self.node_without_labels(qualifiying_labels=['pipeng'])
+        self.label_node(self.node_name, key_value={"nvidia-driver": "true", "pipe": "true"}, overwrite=True)
+        # wait_for_predicate(lambda: new_pipeng_host.SshDirect.gpu_count(), timeout=300)
+        self.node_taint(self.node_name, key='pipeng', value='true', overwrite=True)
+
+    @property
+    def node_name(self):
+        return self._host.SshDirect.execute("hostname -I | awk {'print $1'}").strip()
+
+    def label_node(self, node_name, key_value, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs, format_with_equals_sign=True)
+        k_v_string = ""
+        for key, value in key_value.items():
+            k_v_string += f"{key}={value} "
+        return self._host.SshDirect.execute(f"kubectl label node {node_name} {k_v_string} {options_string}")
+
+    # def delete_labels(self, node_name, *labels, **kwargs):
+    #     options_string = convert_kwargs_to_options_string(kwargs, format_with_equals_sign=True)
+    #     labels_format_string = [f"{label}- " for label in labels]
+    #     print(labels_format_string)
+    #     return self._host.SshDirect.execute(f"kubectl label node {node_name}  {options_string}")
+
+    def taint_node(self, node_name, key_value, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs, format_with_equals_sign=True)
+        k_v_string = ""
+        for key, value in key_value.items():
+            k_v_string += f"{key}={value} "
+        return self._host.SshDirect.execute(f"kubectl taint node {node_name} {k_v_string} {options_string} ")
+
+
 
 plugins.register("K8s", K8s)
 
+#
+# def test_add_key_value_configmap(base_config):
+#     k8s = base_config.hosts.host1.K8s
+#     k8s.insert_kv_into_configmap(service="camera-service", key_value={"Omri": "Golan",
+#                                                                       "ori":"hbertest"})
 
-def test_add_key_value_configmap(base_config):
-    k8s = base_config.hosts.host1.K8s
-    k8s.insert_kv_into_configmap(service="camera-service", key_value={"Omri": "Golan",
-                                                                      "ori":"hbertest"})
+
+@hardware_config(hardware={'host1': {'gpu': 1}})
+def test_scale_pipeng(base_config):
+    base_config.hosts.host1.K8s.scale_pipeng("10.138.0.88")

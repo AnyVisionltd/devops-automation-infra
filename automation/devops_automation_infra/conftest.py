@@ -16,11 +16,11 @@ def clean_up_all_deployments_and_svcs(base_config):
     k8s.delete_svc(svc_name="", all=True)
 
 
-@pytest.hookimpl(trylast=True)
-def pytest_runtest_setup(item):
-    logging.info("running dev-ops pre-test cleaner.")
-    hosts = item.funcargs['base_config'].hosts
-    for name, host in hosts.items():
-        # multi-threaded
-        infra_initializer.init_plugins(host)
-        devops_initializer.init_plugins(host)
+# @pytest.hookimpl(trylast=True)
+# def pytest_runtest_setup(item):
+#     logging.info("running dev-ops pre-test cleaner.")
+#     hosts = item.funcargs['base_config'].hosts
+#     for name, host in hosts.items():
+#         # multi-threaded
+#         infra_initializer.init_plugins(host)
+#         devops_initializer.init_plugins(host)

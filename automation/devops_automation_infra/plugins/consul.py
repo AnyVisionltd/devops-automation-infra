@@ -56,12 +56,40 @@ class Consul(TunneledPlugin):
     def ping_ttl_check(self, check_id):
         self._consul.agent.check.ttl_pass(check_id=check_id)
 
+
+    def ping(self):
+        try:
+            return self._consul.status.leader()
+        except:
+            raise ConnectionError("Error connecting to consul server")
+
+    def get_all_keys(self):
+        try:
+            index, data = self._consul.kv.get("", recurse=True)
+            return dict((x['Key'], x['Value']) for x in data)
+        except Exception as e:
+            raise Exception("Error while retrieving all default keys from consul\nmessage: " + e.message)
+
+    def reset_state(self, keys={}):
+        try:
+            if len(keys) > 0:
+                self.delete_key("", recurse=True) # delete all consul keys
+                for key, value in keys.items(): # restore all consul keys from default keys
+                    self.put_key(key, value)
+        except Exception as e:
+            raise Exception("Error while put keys in consul\nmessgae: " + e.message)
+        return True
+
     def verify_functionality(self):
-        services = self.get_services()
-        assert 'camera-service' in services
-        self.put_key("Test/service/", "51")
-        assert int(self.get_key("Test/service/")) == 51
-        logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
+        try:
+            self.put_key('test_key', 'test_value')
+            self.get_key('test_key')
+            self.delete_key('test_key')
+            first_service = next(iter(self.get_services()))
+            self._consul.health.service(first_service)[1]
+            logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
+        except Exception as e:
+            raise Exception("Error while verifying functionality in consul\n message: " + e.message)
 
 
 plugins.register('Consul', Consul)
