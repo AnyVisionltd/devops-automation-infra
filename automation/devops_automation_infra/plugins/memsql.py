@@ -6,6 +6,7 @@ from pymysql import InternalError
 from infra.model import plugins
 from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
+from pytest_automation_infra.helpers import hardware_config
 
 
 class Memsql(TunneledPlugin):
@@ -67,8 +68,6 @@ class Memsql(TunneledPlugin):
                 logging.info(f"running command {command_dict['truncate_command']}")
                 self.upsert(command_dict['truncate_command'])
             except InternalError as e:
-                #self.fetch_all("")
-                #import ipdb; ipdb.set_trace()
                 command_dict['truncate_command']
                 logging.info("failed to truncate table")
 
@@ -78,5 +77,23 @@ class Memsql(TunneledPlugin):
         except:
             raise ConnectionError("Error connecting to Memsql db")
 
+    def reset_state(self):
+        query = "show databases"
+        res = self.fetch_all(query)
+        dbs = [db['Database'] for db in res]
+        for db in dbs:
+            if db != 'information_schema':
+                self.truncate(db)
+
+    def verify_functionality(self):
+        dbs = self.fetch_all("show databases")
+        logging.info("<<<<<<<MEMSQL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>.")
+
 
 plugins.register('Memsql', Memsql)
+
+
+@hardware_config(hardware={"host": {}})
+def test_basic(base_config):
+    memsql = base_config.hosts.host.Memsql
+    memsql.verify_functionality()
