@@ -28,4 +28,7 @@ def pytest_runtest_setup(item):
     logging.info("running dev-ops pre-test cleaner.")
     hosts = item.funcargs['base_config'].hosts
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        executor.map(setup, [host for name, host in hosts.items()])
+         futures = executor.map(setup, [host for name, host in hosts.items()])
+
+    for future in futures:
+        pass
