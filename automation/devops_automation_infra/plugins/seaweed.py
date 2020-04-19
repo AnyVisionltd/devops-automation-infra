@@ -14,6 +14,7 @@ class Seaweed(TunneledPlugin):
         self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-s3.default.svc.cluster.local'
         self.PORT = 8333
         self._client = None
+        self._resource = None
 
     @property
     def client(self):
@@ -21,16 +22,37 @@ class Seaweed(TunneledPlugin):
             self._client = self._s3_client()
         return self._client
 
+    @property
+    def resource(self):
+        if self._resource is None:
+            self._resource = self._s3_resource()
+        return self._resource
+
     def _s3_client(self):
-        self.start_tunnel(self.DNS_NAME, self.PORT)
+        if self.local_bind_port is None:
+            self.start_tunnel(self.DNS_NAME, self.PORT)
+
         s3_endpoint_url = f'http://localhost:{self.local_bind_port}'
-        s3 = boto3.client('s3', endpoint_url=s3_endpoint_url,
+        return boto3.client('s3', endpoint_url=s3_endpoint_url,
                           aws_secret_access_key='any',
                           aws_access_key_id='any')
-        return s3
+
+
+    def _s3_resource(self):
+        if self.local_bind_port is None:
+            self.start_tunnel(self.DNS_NAME, self.PORT)
+
+        s3_endpoint_url = f'http://localhost:{self.local_bind_port}'
+        return boto3.resource('s3', endpoint_url=s3_endpoint_url,
+                          aws_secret_access_key='any',
+                          aws_access_key_id='any')
+        
 
     def get_bucket_files(self, bucket_name, recursive=True):
         return self.get_files_by_prefix(bucket_name, '', recursive)
+
+    def get_all_buckets(self):
+        return list(self.resource.buckets.all())
 
     def get_files_by_prefix(self, bucket_name, prefix, recursive=True):
         res = self.client.list_objects(Bucket=bucket_name, Prefix=prefix)
@@ -98,6 +120,17 @@ class Seaweed(TunneledPlugin):
     def delete_file(self, bucket_name, file_name):
         self.client.delete_object(Bucket=bucket_name, Key=file_name)
         assert not self.file_exists(bucket_name, file_name)
+
+    def ping(self):
+        self.get_all_buckets()
+
+    def reset_state(self, keys={}):
+        all_buckets = self.get_all_buckets()
+        if len(all_buckets) > 0:
+            logging.info(f"reset seaweedfs state")
+            for bucket in all_buckets:
+                if bucket.name != 'static':
+                    self.delete_bucket(bucket.name)
 
     def verify_functionality(self):
         self.create_bucket("test_bucket")
