@@ -20,7 +20,7 @@ class K8s(object):
         return res['serverVersion']['gitVersion']
 
     def scale(self, resource, replicas=20):
-        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource} {replicas}")
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource} --replicas={replicas}")
 
     def create(self, resource, options=""):
         try:
