@@ -10,6 +10,13 @@ from devops_automation_infra.utils.k8s_utils import create_deployment_with_repli
 from devops_automation_infra.utils.health_check import host_is_active
 
 
+def all_deployments_pods_alive(host, deployment_name):
+    deployment_pod_ips = host.K8s.get_deployments_pod_internal_ips(deployment_name)
+    for pod_ip in deployment_pod_ips:
+        res = pod_is_live(host, ip=pod_ip, port=8080)
+        return res == "Hello World!"
+
+
 def pod_is_live(host, ip, port, timeout=10):
     try:
         res = host.SshDirect.execute(f"curl --max-time {timeout} http://{ip}:{port}")
@@ -27,9 +34,6 @@ def test_cluster_network_master_restart(base_config,
     # Clean up before test starts
     base_config.hosts.host1.SshDirect.connect(timeout=60)
     create_deployment_with_replicas(base_config.hosts.host1, deployment_name, docker_image_name, amount_of_replicas)
-    wait_for_predicate(
-        lambda: base_config.hosts.host1.K8s.number_ready_pods_in_deployment(deployment_name) == amount_of_replicas,
-        timeout=300)
     base_config.hosts.host1.Power.reboot()
     # Check host has started again
     wait_for_predicate_nothrow(lambda: host_is_active(base_config.hosts.host1.ip), timeout=60)
@@ -37,10 +41,7 @@ def test_cluster_network_master_restart(base_config,
     wait_for_predicate(lambda: base_config.hosts.host1.Gravity.is_cluster_healthy(),
                        timeout=120,
                        interval=5)
-    deployment_pod_ips = wait_for_predicate_nothrow(
-        lambda: base_config.hosts.host1.K8s.get_deployments_pod_internal_ips(deployment_name),
-        timeout=300)
-    assert len(deployment_pod_ips) == amount_of_replicas
-    for pod_ip in deployment_pod_ips:
-        res = pod_is_live(base_config.hosts.host1, ip=pod_ip, port=8080)
-        assert res == "Hello World!"
+    wait_for_predicate_nothrow(lambda: all_deployments_pods_alive(base_config.hosts.host1, deployment_name),
+                       timeout=300,
+                       interval=10)
+

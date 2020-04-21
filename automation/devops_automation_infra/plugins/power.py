@@ -9,10 +9,11 @@ class Power(object):
     def __init__(self, host):
         self._host = host
 
-    def reboot(self):
-        # Reboots the bos and verify the reboot actually happened using a ping
-        self._host.SshDirect.execute("sudo /sbin/reboot -f > /dev/null 2>&1 &", timeout=0.1)
-        wait_for_predicate(lambda: not host_is_active(self._host.ip))
+    def reboot(self, options=""):
+        # Reboots the host and verifies using a ping
+        host = self._host
+        host.SshDirect.execute(f"sudo /sbin/reboot {options} > /dev/null 2>&1 &", timeout=0.1)
+        wait_for_predicate(lambda: not host_is_active(host.ip), timeout=20)
 
 
 plugins.register("Power", Power)

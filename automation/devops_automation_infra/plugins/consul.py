@@ -1,6 +1,7 @@
 import logging
 
 import sshtunnel
+import base64
 import consul
 from munch import Munch
 from automation_infra.plugins.base_plugin import TunneledPlugin
@@ -56,12 +57,16 @@ class Consul(TunneledPlugin):
     def ping_ttl_check(self, check_id):
         self._consul.agent.check.ttl_pass(check_id=check_id)
 
+    def divide_chunks(self, payload, size):
+        for i in range(0, len(payload), size): 
+            yield payload[i:i + size]
+
+    def transaction(self, payload):
+        for chunk in self.divide_chunks(payload, 64):
+            self._consul.txn.put(chunk)
 
     def ping(self):
-        try:
-            return self._consul.status.leader()
-        except:
-            raise ConnectionError("Error connecting to consul server")
+        self._consul.status.leader()
 
     def get_all_keys(self):
         try:
@@ -69,27 +74,39 @@ class Consul(TunneledPlugin):
             return dict((x['Key'], x['Value']) for x in data)
         except Exception as e:
             raise Exception("Error while retrieving all default keys from consul\nmessage: " + e.message)
+    
+    def create_kv_payload(self, keys={}):
+        transaction_arr = []
+
+        for key, value in keys.items():
+            transaction_dict = {}
+            transaction_dict['KV'] = {}
+            transaction_dict['KV']['Verb'] = "set"
+            transaction_dict['KV']['Key'] = key
+            if type(value) is bytes:
+                transaction_dict['KV']['Value'] = base64.b64encode(value).decode()
+            elif type(value) is type(None):
+                transaction_dict['KV']['Value'] = ""
+            else:
+                transaction_dict['KV']['Value'] = base64.b64encode(value.encode()).decode()
+            transaction_arr.append(transaction_dict)
+
+        return transaction_arr
 
     def reset_state(self, keys={}):
-        try:
-            if len(keys) > 0:
-                self.delete_key("", recurse=True) # delete all consul keys
-                for key, value in keys.items(): # restore all consul keys from default keys
-                    self.put_key(key, value)
-        except Exception as e:
-            raise Exception("Error while put keys in consul\nmessgae: " + e.message)
-        return True
+        if len(keys) > 0:
+            logging.info(f"reset consul state")
+            payload = self.create_kv_payload(keys)
+            self.delete_key("", recurse=True) # delete all consul keys
+            self.transaction(payload) # reset keys using transaction
 
     def verify_functionality(self):
-        try:
-            self.put_key('test_key', 'test_value')
-            self.get_key('test_key')
-            self.delete_key('test_key')
-            first_service = next(iter(self.get_services()))
-            self._consul.health.service(first_service)[1]
-            logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
-        except Exception as e:
-            raise Exception("Error while verifying functionality in consul\n message: " + e.message)
+        self.put_key('test_key', 'test_value')
+        self.get_key('test_key')
+        self.delete_key('test_key')
+        first_service = next(iter(self.get_services()))
+        self._consul.health.service(first_service)[1]
+        logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
 
 plugins.register('Consul', Consul)

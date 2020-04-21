@@ -240,20 +240,25 @@ class Kafka(TunneledPlugin):
 
         logging.info(f"<<<<<<<<<<KAFKA PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>")
 
+    def ping(self):
+        self.create_topic('temp_topic')
+        assert 'temp_topic' in self.topic_names()
+        self.delete_topic('temp_topic')
+        assert 'temp_topic' not in self.topic_names()
+
+    def reset_state(self):
+        topics = self.topic_names()
+        for topic in topics:
+            self.delete_topic(topic)
+            assert topic not in self.topic_names()
+            self.create_topic(topic)
+            assert topic in self.topic_names()
+
 
 plugins.register('Kafka', Kafka)
 
 
 @hardware_config(hardware={"host": {}})
 def test_basic(base_config):
-    automation_tests_topic = 'anv.automation.topic1'
-
     kafka = base_config.hosts.host.Kafka
-    if automation_tests_topic in kafka.topic_names():
-        kafka.delete_topic(automation_tests_topic)
-
-    logging.info("creating topic")
-    kafka.create_topic(automation_tests_topic)
-    time.sleep(5)
-    logging.info("done creating topic")
-    assert automation_tests_topic in kafka.topic_names()
+    kafka.verify_functionality_full()
