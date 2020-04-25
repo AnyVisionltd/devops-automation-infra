@@ -1,4 +1,5 @@
 import json
+import logging
 
 from automation_infra.plugins.ssh_direct import SshDirect
 from automation_infra.utils.waiter import wait_for_predicate, wait_for_predicate_nothrow
@@ -50,10 +51,19 @@ class Gravity(object):
         self._host.SshDirect.execute(download_request)
 
     def gravity_make_executable(self, gravity_path):
-            self._host.SshDirect.execute(f"sudo chmod +x {gravity_path}")
+        self._host.SshDirect.execute(f"sudo chmod +x {gravity_path}")
 
     def join(self, master_ip, join_token, role='node', cloud_provider='generic'):
         self._host.SshDirect.execute(f'sudo gravity join {master_ip} --token={join_token} --role={role} --cloud-provider={cloud_provider}')
 
+    def ping(self):
+        assert self.nodes()
+        assert self.status()
+
+    def test_functionality(self):
+        self.ping()
+        assert self.master_ip
+        assert self.token
+        logging.info("<<<<<<<GRAVITY PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>.")
 
 plugins.register('Gravity', Gravity)
