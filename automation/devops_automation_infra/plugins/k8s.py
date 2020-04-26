@@ -5,8 +5,8 @@ from automation_infra.utils.waiter import wait_for_predicate
 from devops_automation_infra.utils.k8s_utils import write_configmap_json_to_tmp_dir
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
-from pytest_automation_infra import helpers
 from devops_automation_infra.utils.cmd_utils import convert_kwargs_to_options_string
+from pytest_automation_infra.helpers import hardware_config
 
 
 class K8s(object):
@@ -20,7 +20,7 @@ class K8s(object):
         return res['serverVersion']['gitVersion']
 
     def scale(self, resource, replicas=20):
-        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource} {replicas}")
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource}    {replicas}")
 
     def create(self, resource, options=""):
         try:
@@ -83,7 +83,6 @@ class K8s(object):
     def delete_deployment(self, name="", **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs, format_with_equals_sign=True)
         self.delete(f"deployment {name}", options_string)
-
 
     def replace_config_map(self, config_map_file_path):
         self._host.SshDirect.execute(f"sudo gravity exec kubectl replace -f {config_map_file_path}")
@@ -159,11 +158,36 @@ class K8s(object):
     def get_pods_using_selector_labels(self, label_value, label_name="app"):
         return self.get_pods(f"--selector={label_name}={label_value} --output json")
 
+    def nodes(self):
+        return json.loads(self._host.SshDirect.execute(f"kubectl get nodes --output json"))['items']
+
+    def host_to_node_name(self, host):
+        return host.SshDirect.execute("ip route get 1 | awk '{print $(NF-2);exit}'").strip()
+
+    def label_node(self, node_name, *labels):
+        try:
+            return self._host.SshDirect.execute(f"kubectl label node {node_name} {' '.join(labels)}")
+        except SSHCalledProcessError as e:
+            if "already has a value" in e.output:
+                logging.warning(f"Node already has this Node: {node_name} already has these {labels}")
+                pass
+
+    def taint_node(self, node_name, options):
+
+        try:
+            return self._host.SshDirect.execute(f"kubectl taint node {node_name} {options}")
+        except SSHCalledProcessError as e:
+            if "already has" in e.output:
+                logging.warning(f"Node:{node_name} already tainted with this taint: {options}")
+                pass
+
+    def get_statefulset(self,name):
+        res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get statefulset {name} --output json")
+        return json.loads(res)
+
+    def get_all_sts_replicas_number(self, name):
+        res = self.get_statefulset(name)
+        return res['status']['replicas']
+
 
 plugins.register("K8s", K8s)
-
-
-def test_add_key_value_configmap(base_config):
-    k8s = base_config.hosts.host1.K8s
-    k8s.insert_kv_into_configmap(service="camera-service", key_value={"Omri": "Golan",
-                                                                      "ori":"hbertest"})
