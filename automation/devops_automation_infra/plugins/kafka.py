@@ -92,30 +92,31 @@ class Kafka(TunneledPlugin):
         topics = self.get_topics()
         return [k for k, v in topics.items()]
 
-    def create_topic(self, name):
+    def create_topics(self, topic_names):
         """ create topic if not exists """
-        new_topic = self._conn.root.create_topic_object(name)
+        new_topic = self._conn.root.create_topic_object(topic_names)
         topics = self._conn.root.create_list(new_topic)
         fs = self.admin.create_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
         for topic, f in fs.items():
             try:
                 f.result()
-                logging.info(f'Topic {name} created')
+                logging.info(f'Topic {topic_names} created')
                 return True
             except Exception as e:
-                logging.exception(f'Failed to create topic {name}: {str(e)}')
+                logging.exception(f'Failed to create topic {topic_names}: {str(e)}')
                 raise
 
-    def delete_topic(self, topic):
-        topics = self._conn.root.create_list(topic)
+
+    def delete_topics(self, topics):
+        topics = self._conn.root.create_list(topics)
         fs = self.admin.delete_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
-        for topic, f in fs.items():
+        for topics, f in fs.items():
             try:
                 f.result()
-                logging.info(f'Topic {topic} deleted')
+                logging.info(f'Topic {topics} deleted')
                 return True
             except Exception as e:
-                logging.exception(f'Failed to delete topic {topic}: {str(e)}')
+                logging.exception(f'Failed to delete topic {topics}: {str(e)}')
 
     def consume_x_messages(self, topics, num, timeout=TIMEOUT):
         list_of_msg = []
@@ -241,18 +242,15 @@ class Kafka(TunneledPlugin):
         logging.info(f"<<<<<<<<<<KAFKA PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>")
 
     def ping(self):
-        self.create_topic('temp_topic')
-        assert 'temp_topic' in self.topic_names()
-        self.delete_topic('temp_topic')
-        assert 'temp_topic' not in self.topic_names()
+        self.get_topics()
 
     def reset_state(self):
         topics = self.topic_names()
-        for topic in topics:
-            self.delete_topic(topic)
-            assert topic not in self.topic_names()
-            self.create_topic(topic)
-            assert topic in self.topic_names()
+        self.delete_topics(topics)
+        time.sleep(1)
+        temp_topics = self.topic_names()
+        assert not temp_topics, f"Wasnt successfull deleting all topics, still exists: {temp_topics}"
+        self.create_topics(topics)
 
 
 plugins.register('Kafka', Kafka)
