@@ -1,5 +1,3 @@
-import logging
-
 from devops_automation_infra.plugins.memsql import Memsql
 from devops_automation_infra.plugins.seaweed import Seaweed
 from devops_automation_infra.plugins.kafka import Kafka
@@ -17,4 +15,3 @@ def init_plugins(host):
     host.Kafka
     host.Seaweed
     consul_util.backup_consul_keys(host)
-    host.clean_between_tests()
