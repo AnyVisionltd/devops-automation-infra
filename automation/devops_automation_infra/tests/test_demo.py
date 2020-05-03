@@ -60,8 +60,8 @@ def test_consul_get_services(base_config):
 def test_kafka_functionality(base_config):
     topics = base_config.hosts.host.Kafka.get_topics()
     assert len(topics) > 0
-    success = base_config.hosts.host.Kafka.create_topic('oris_new_topic')
+    success = base_config.hosts.host.Kafka.create_topics('oris_new_topic')
     assert success
     time.sleep(5)
-    success = base_config.hosts.host.Kafka.delete_topic('oris_new_topic')
+    success = base_config.hosts.host.Kafka.delete_topics('oris_new_topic')
     assert success
