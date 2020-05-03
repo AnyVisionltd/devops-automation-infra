@@ -252,18 +252,16 @@ class Kafka(TunneledPlugin):
         logging.info(f"<<<<<<<<<<KAFKA PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>")
 
     def ping(self):
-        self.create_topic('temp_topic')
-        assert 'temp_topic' in self.topic_names()
-        self.delete_topic('temp_topic')
-        assert 'temp_topic' not in self.topic_names()
+        self.get_topics()
 
     def reset_state(self):
-        topics = self.topic_names()
-        for topic in topics:
-            self.delete_topic(topic)
-            assert topic not in self.topic_names()
-            self.create_topic(topic)
-            assert topic in self.topic_names()
+        self.delete_all_topics()
+        time.sleep(1)
+        after_delete_topics = self.topic_names()
+        if after_delete_topics:
+            # __consumer_offsets is an automatically created topic which stores information for consumer_groups
+            assert after_delete_topics == ['__consumer_offsets'], \
+                f"Wasnt successfull deleting all topics, still exists: {after_delete_topics}"
 
 
 plugins.register('Kafka', Kafka)
