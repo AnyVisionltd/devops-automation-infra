@@ -82,7 +82,7 @@ class Kafka(TunneledPlugin):
     def _execute_rpyc_server(self):
         self._host.SSH.put('../devops-automation-infra/automation/devops_automation_infra/utils/rpyc-kafka-server.py',
                            '/')
-        self._host.SSH.execute('nohup python3 -u /rpyc-kafka-server.py </dev/null >/dev/null 2>&1 &')
+        self._host.SSH.execute('nohup python3 -u /rpyc-kafka-server.py > rpyc.log &')
         time.sleep(5)
 
     def get_topics(self, timeout=TIMEOUT):
