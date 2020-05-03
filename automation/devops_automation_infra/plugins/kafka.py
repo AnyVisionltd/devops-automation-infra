@@ -92,30 +92,41 @@ class Kafka(TunneledPlugin):
         topics = self.get_topics()
         return [k for k, v in topics.items()]
 
-    def create_topic(self, name):
-        """ create topic if not exists """
-        new_topic = self._conn.root.create_topic_object(name)
-        topics = self._conn.root.create_list(new_topic)
+    def create_topics(self, *topic_names):
+        new_topics = []
+        for topic_name in topic_names:
+            new_topic = self._conn.root.create_topic_object(topic_name)
+            new_topics.append(new_topic)
+        topics = self._conn.root.create_list(*new_topics)
         fs = self.admin.create_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
         for topic, f in fs.items():
             try:
                 f.result()
-                logging.info(f'Topic {name} created')
-                return True
+                logging.info(f'Topic {topic} created')
             except Exception as e:
-                logging.exception(f'Failed to create topic {name}: {str(e)}')
-                raise
+                if 'TOPIC_ALREADY_EXISTS' not in str(e):
+                    logging.exception(f'Failed to create topic {topic}: {str(e)}')
+                else:
+                    continue
+        return True
 
-    def delete_topic(self, topic):
-        topics = self._conn.root.create_list(topic)
-        fs = self.admin.delete_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
-        for topic, f in fs.items():
+    def delete_topics(self, *topics):
+        remote_topics = self._conn.root.create_list(*topics)
+        fs = self.admin.delete_topics(remote_topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
+        for topic_name, f in fs.items():
             try:
                 f.result()
-                logging.info(f'Topic {topic} deleted')
-                return True
+                logging.info(f'Topic {topic_name} deleted')
             except Exception as e:
-                logging.exception(f'Failed to delete topic {topic}: {str(e)}')
+                logging.exception(f'Failed to delete topic {topic_name}: {str(e)}')
+        return True
+
+    def delete_all_topics(self):
+        topics = self.topic_names()
+        if not topics:
+            logging.warning("asked to delete all kafka topics but there were no kafka topics")
+            return
+        self.delete_topics(*topics)
 
     def consume_x_messages(self, topics, num, timeout=TIMEOUT):
         list_of_msg = []
