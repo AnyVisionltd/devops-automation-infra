@@ -7,6 +7,8 @@ import rpyc
 from confluent_kafka.admin import KafkaException
 
 from automation_infra.plugins.base_plugin import TunneledPlugin
+from automation_infra.utils import waiter
+from automation_infra.utils.timer import timeitdecorator
 from infra.model import plugins
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
@@ -88,45 +90,39 @@ class Kafka(TunneledPlugin):
     def get_topics(self, timeout=TIMEOUT):
         return self.admin.list_topics(timeout=timeout).topics
 
+    @timeitdecorator
     def topic_names(self):
-        topics = self.get_topics()
-        return [k for k, v in topics.items()]
+        return self._conn.root.topic_names()
 
+    @timeitdecorator
+    def num_topics(self):
+        return self._conn.root.num_topics()
+
+    @timeitdecorator
     def create_topics(self, *topic_names):
-        new_topics = []
-        for topic_name in topic_names:
-            new_topic = self._conn.root.create_topic_object(topic_name)
-            new_topics.append(new_topic)
-        topics = self._conn.root.create_list(*new_topics)
-        fs = self.admin.create_topics(topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
-        for topic, f in fs.items():
-            try:
-                f.result()
-                logging.info(f'Topic {topic} created')
-            except Exception as e:
-                if 'TOPIC_ALREADY_EXISTS' not in str(e):
-                    logging.exception(f'Failed to create topic {topic}: {str(e)}')
-                else:
-                    continue
-        return True
+        remote_topics = self._conn.root.create_list(*topic_names)
+        result = self._conn.root.create_topics(*remote_topics)
+        if not result == True:
+            raise Exception(str(result))
+        waiter.await_changing_result(self.num_topics)
 
-    def delete_topics(self, *topics):
-        remote_topics = self._conn.root.create_list(*topics)
-        fs = self.admin.delete_topics(remote_topics, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
-        for topic_name, f in fs.items():
-            try:
-                f.result()
-                logging.info(f'Topic {topic_name} deleted')
-            except Exception as e:
-                logging.exception(f'Failed to delete topic {topic_name}: {str(e)}')
-        return True
+    @timeitdecorator
+    def delete_topics(self, *topic_names):
+        remote_topics = self._conn.root.create_list(*topic_names)
+        result = self._conn.root.delete_topics(remote_topics)
+        if not result == True:
+            raise Exception(str(result))
+        # give time for topics to be actually deleted
+        waiter.await_changing_result(self.num_topics)
 
+    @timeitdecorator
     def delete_all_topics(self):
-        topics = self.topic_names()
-        if not topics:
-            logging.warning("asked to delete all kafka topics but there were no kafka topics")
+        topic_names = self.topic_names()
+        if not topic_names:
             return
-        self.delete_topics(*topics)
+        self.delete_topics(*topic_names)
+        # __consumer_groups topic is created automatically
+        assert self.num_topics <= 1
 
     def consume_x_messages(self, topics, num, timeout=TIMEOUT):
         list_of_msg = []
@@ -256,12 +252,6 @@ class Kafka(TunneledPlugin):
 
     def reset_state(self):
         self.delete_all_topics()
-        time.sleep(1)
-        after_delete_topics = self.topic_names()
-        if after_delete_topics:
-            # __consumer_offsets is an automatically created topic which stores information for consumer_groups
-            assert after_delete_topics == ['__consumer_offsets'], \
-                f"Wasnt successfull deleting all topics, still exists: {after_delete_topics}"
 
 
 plugins.register('Kafka', Kafka)
