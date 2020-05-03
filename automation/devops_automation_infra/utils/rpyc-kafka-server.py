@@ -1,8 +1,11 @@
 import rpyc
+from confluent_kafka.cimpl import KafkaException
 from rpyc.utils.server import ThreadedServer
 from confluent_kafka import Consumer, Producer, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 
+
+TIMEOUT = 10
 
 class KafkaServer(rpyc.Service):
     def __init__(self):
@@ -49,6 +52,41 @@ class KafkaServer(rpyc.Service):
     def create_topic_partition_object(topic, partition, offset):
         topic_partition = TopicPartition(topic=topic, partition=partition, offset=offset)
         return topic_partition
+
+    def num_topics(self):
+        return len(self.topic_names())
+
+    def topic_names(self):
+        topics = self.admin.list_topics(timeout=TIMEOUT).topics
+        return [k for k, v in topics.items()]
+
+    def delete_topics(self, topic_names):
+        fs = self.admin.delete_topics(topic_names)
+        for topic_name, f in fs.items():
+            try:
+                f.result()
+                print(f'Topic {topic_name} deleted')
+            except KafkaException as e:
+                print(f"caught exception deleting topic {topic_name}: {e}")
+                return e
+        return True
+
+    def create_topics(self, *topic_names):
+        topics_to_create = []
+        for topic_name in topic_names:
+            topic = self.create_topic_object(topic_name)
+            topics_to_create.append(topic)
+        fs = self.admin.create_topics(topics_to_create, request_timeout=TIMEOUT, operation_timeout=TIMEOUT)
+        for topic, f in fs.items():
+            try:
+                f.result()
+                print(f'Topic {topic} created')
+            except KafkaException as e:
+                if e.args[0].name() != 'TOPIC_ALREADY_EXISTS':
+                    print(e.args[0].code())
+                    print(e.args[0].name())
+                    return e
+        return True
 
 
 if __name__ == "__main__":
