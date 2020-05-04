@@ -75,7 +75,7 @@ class Kafka(TunneledPlugin):
         topics = topics if type(topics) == list else [topics]
         topics_l = self._conn.root.create_list(*topics)
         self.consumer.subscribe(topics_l)
-        self.consumer.poll(timeout=5)
+        self.consumer.poll(timeout=TIMEOUT)
         time.sleep(5)
 
     def unsubscribe(self):
@@ -229,14 +229,15 @@ class Kafka(TunneledPlugin):
         kafka_util.produce_messages(num_messages, automation_tests_topic, self)
         logging.info("testing consume_all:")
         consumed_messages = self.consume_all_messages(automation_tests_topic)
-        logging.info(f"got {len(consumed_messages)} messages!")
-        assert len(consumed_messages) == num_messages, "number of consumed messages != number of produced messages"
+        assert len(consumed_messages) == num_messages, f"number of consumed messages {len(consumed_messages)} != " \
+                                                       f"number of produced messages {num_messages}"
         logging.info(f"consume iter functioning properly {[msg.value() for msg in consumed_messages]}")
 
         kafka_util.produce_messages(num_messages, automation_tests_topic, self)
         logging.info("testing consume_x_messages:")
         consumed_messages = self.consume_x_messages(automation_tests_topic, num_messages / 2)
-        assert len(consumed_messages) == num_messages / 2, "number of consumed messages != number of produced messages"
+        assert len(consumed_messages) == num_messages / 2, f"number of consumed messages {len(consumed_messages)} != " \
+                                                           f"number of produced messages {num_messages/2}"
         logging.info(f"consume_x_messages functioning properly. messages: {[msg.value() for msg in consumed_messages]}")
 
         logging.info("testing kafka.empty:")
