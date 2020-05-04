@@ -122,7 +122,7 @@ class Kafka(TunneledPlugin):
             return
         self.delete_topics(*topic_names)
         # __consumer_groups topic is created automatically
-        assert self.num_topics <= 1
+        assert self.num_topics() <= 1
 
     def consume_x_messages(self, topics, num, timeout=TIMEOUT):
         list_of_msg = []
