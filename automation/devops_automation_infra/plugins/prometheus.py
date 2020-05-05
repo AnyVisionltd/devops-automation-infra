@@ -18,7 +18,13 @@ class PrometheusService(TunneledPlugin):
             else prometheus_connection_config['port']['k8s']
         self.start_tunnel(self.DNS_NAME, self.PORT)
         self.url = f'{prometheus_connection_config["url"]["compose"]}:{self.local_bind_port}' if not self.is_k8s \
-            else prometheus_connection_config['url']['k8s']
+            else f'{prometheus_connection_config["url"]["k8s"]}'
+        if self.is_k8s:
+            with open('/etc/hosts', 'r+') as f:
+                content = f.read()
+                if f"{host.ip} {self.DNS_NAME}" not in content:
+                    logging.info(f"write new line in hosts file: {host.ip} {self.DNS_NAME}")
+                    f.write(f'\n{host.ip} {self.DNS_NAME}\n')
         self.headers = None if not self.is_k8s \
             else {'Authorization': f'Basic {prometheus_connection_config["auth"]}'}
         self._prom = Prometheus(url=self.url, headers=self.headers)
