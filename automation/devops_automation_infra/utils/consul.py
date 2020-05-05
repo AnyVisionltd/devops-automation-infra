@@ -19,7 +19,9 @@ def backup_consul_keys(host):
             with open("keys.tmp", "rb") as f:
                 all_default_keys_dict = pickle.load(f)
             os.remove("keys.tmp")
-            consul.reset_state(all_default_keys_dict) #restore keys from backup file
+            current_keys = consul.get_all_keys()
+            if current_keys != all_default_keys_dict:
+                consul.reset_state(all_default_keys_dict) #restore keys from backup file
             sshdirect.execute(f"rm -f {work_dir}/all_default_keys.pickle")
 
         except SSHCalledProcessError as e:
