@@ -1,4 +1,5 @@
 import json
+import logging
 
 from base64 import b64encode
 from prometheus_http_client import Prometheus
@@ -7,7 +8,7 @@ from devops_automation_infra.utils.config import prometheus_connection_config
 from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
 from infra.model import plugins
-
+from pytest_automation_infra.helpers import hardware_config
 
 class PrometheusService(TunneledPlugin):
     def __init__(self, host):
@@ -32,5 +33,12 @@ class PrometheusService(TunneledPlugin):
     def query(self, query):
         return json.loads(self._prom.query(metric=query))
 
+    def ping(self):
+        self.query(query='prometheus_engine_queries')
 
 plugins.register('PrometheusService', PrometheusService)
+
+@hardware_config(hardware={"host": {}})
+def test_basic(base_config):
+    prom = base_config.hosts.host.PrometheusService
+    prom.ping()
