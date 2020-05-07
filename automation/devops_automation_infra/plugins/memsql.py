@@ -71,11 +71,11 @@ class Memsql(TunneledPlugin):
             and TABLE_NAME not in ('DATABASECHANGELOG', 'DATABASECHANGELOGLOCK'); """)
         for command_dict in truncate_commands:
             try:
-                logging.info(f"running command {command_dict['truncate_command']}")
+                logging.debug(f"running command {command_dict['truncate_command']}")
                 self.upsert(command_dict['truncate_command'])
             except InternalError as e:
                 command_dict['truncate_command']
-                logging.info("failed to truncate table")
+                logging.debug("failed to truncate table")
 
     def ping(self):
         try:

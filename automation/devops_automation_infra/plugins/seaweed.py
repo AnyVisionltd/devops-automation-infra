@@ -127,7 +127,7 @@ class Seaweed(TunneledPlugin):
     def reset_state(self, keys={}):
         all_buckets = self.get_all_buckets()
         if len(all_buckets) > 0:
-            logging.info(f"reset seaweedfs state")
+            logging.debug(f"reset seaweedfs state")
             for bucket in all_buckets:
                 if bucket.name != 'static':
                     self.delete_bucket(bucket.name)
