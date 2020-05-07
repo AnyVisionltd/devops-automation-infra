@@ -22,6 +22,12 @@ class Memsql(TunneledPlugin):
             self._connection = self._get_connection()
         return self._connection
 
+    @property
+    def password(self):
+        assert helpers.is_k8s(self._host.SshDirect)
+        return self._host.SshDirect.execute(
+            "kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
+
     def _get_connection(self):
         self.start_tunnel(self.DNS_NAME, self.PORT)
         memsql_password = "password" if not helpers.is_k8s(self._host.SshDirect) else self._host.SshDirect.execute("kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
