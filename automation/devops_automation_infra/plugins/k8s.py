@@ -1,7 +1,7 @@
 import json
 import logging
 
-from automation_infra.utils.waiter import wait_for_predicate
+from automation_infra.utils.waiter import wait_for_predicate, wait_for_predicate_nothrow, await_changing_result
 from devops_automation_infra.utils.k8s_utils import write_configmap_json_to_tmp_dir
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
@@ -181,13 +181,23 @@ class K8s(object):
                 logging.warning(f"Node:{node_name} already tainted with this taint: {options}")
                 pass
 
-    def get_statefulset(self,name):
+    def get_statefulset(self, name):
         res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get statefulset {name} --output json")
         return json.loads(res)
 
     def get_all_sts_replicas_number(self, name):
         res = self.get_statefulset(name)
         return res['status']['replicas']
+
+    def update_deployment_image(self, name, image):
+        self._host.SshDirect.execute(f"sudo gravity exec kubectl set image deployments/{name} {name}={image}")
+        # Indicates the updating of the image was for all pods successfully
+        num_ready_pods = await_changing_result(self.number_ready_pods_in_deployment(name), ...)
+        assert num_ready_pods == len(self.get_pods_using_selector_labels(label_value=name)['items'])
+
+    def all_deployments_pods_running(self, name):
+        return wait_for_predicate_nothrow(lambda: self.number_ready_pods_in_deployment(name) ==
+                                           len(self.get_pods_using_selector_labels(label_value=name)['items']))
 
 
 plugins.register("K8s", K8s)
