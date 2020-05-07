@@ -22,14 +22,14 @@ def setup(host):
     infra_initializer.init_plugins(host)
     devops_initializer.init_plugins(host)
     host.clean_between_tests()
-    logging.info(f"finished host: {host } setup")
+    logging.debug(f"finished host: {host } setup")
 
 
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_setup(item):
-    logging.info("running dev-ops pre-test cleaner.")
+    logging.debug("running dev-ops pre-test cleaner.")
     with timeit(f"runtest_setup {item}"):
         hosts = item.funcargs['base_config'].hosts
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             list(executor.map(setup, [host for name, host in hosts.items()]))
-        logging.info(f"finished devops pre-test cleaner successfuly!")
+        logging.debug(f"finished devops pre-test cleaner successfuly!")

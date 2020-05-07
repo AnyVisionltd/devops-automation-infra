@@ -95,7 +95,7 @@ class Consul(TunneledPlugin):
 
     def reset_state(self, keys={}):
         if len(keys) > 0:
-            logging.info(f"reset consul state")
+            logging.debug(f"reset consul state")
             payload = self.create_kv_payload(keys)
             self.delete_key("", recurse=True) # delete all consul keys
             self.transaction(payload) # reset keys using transaction

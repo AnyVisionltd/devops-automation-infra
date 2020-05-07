@@ -140,7 +140,7 @@ class Kafka(TunneledPlugin):
             logging.debug("received message!")
             messages.append(msg)
             logging.debug("appended message!")
-        logging.info(f"got {len(messages)} messages!")
+        logging.debug(f"got {len(messages)} messages!")
         return messages
 
     def consume_iter(self, topics, timeout=TIMEOUT, commit=False):
@@ -193,13 +193,14 @@ class Kafka(TunneledPlugin):
         for msg in self.consume_iter(topics, timeout=timeout):
             logging.debug(f"Received unexpected message: {msg.value()}")
             raise Exception("received message from topic which should be empty!")
-        logging.info(f"topic {topics} is empty!")
+        logging.debug(f"topic {topics} is empty!")
 
     def put_message(self, topic, key, msg):
         self.producer.produce(topic=topic, key=key, value=msg, callback=self.delivery_report)
         self.producer.poll(0)
 
     def verify_functionality(self):
+        logging.info("verifying kafka functionality")
         automation_tests_topic = 'anv.automation.topic1'
         logging.info("getting topics")
         kafka_util.init_topic(automation_tests_topic, self)
@@ -219,6 +220,7 @@ class Kafka(TunneledPlugin):
         logging.info(f"<<<<<<<<<<KAFKA PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>")
 
     def verify_functionality_full(self):
+        logging.info("verifying kafka functionality - FULL")
         automation_tests_topic = 'anv.automation.topic1'
         logging.info("getting topics")
         kafka_util.init_topic(automation_tests_topic, self)

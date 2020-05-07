@@ -13,7 +13,7 @@ def backup_consul_keys(host):
         
         # try to read back up file
         try:
-            logging.info(f"download all default keys file: {work_dir}/all_default_keys.pickle")
+            logging.debug(f"download all default keys file: {work_dir}/all_default_keys.pickle")
             res = sshdirect.execute(f"ls {work_dir}/all_default_keys.pickle")
             sshdirect.download("keys.tmp", f"{work_dir}/all_default_keys.pickle")
             with open("keys.tmp", "rb") as f:
@@ -31,7 +31,7 @@ def backup_consul_keys(host):
         # backup keys to file
         with open("keys.tmp", 'wb') as f:
             pickle.dump(consul.get_all_keys(), f)
-        logging.info(f"upload all default keys file: {work_dir}/all_default_keys.pickle")
+        logging.debug(f"upload all default keys file: {work_dir}/all_default_keys.pickle")
         sshdirect.upload("keys.tmp", f"{work_dir}/all_default_keys.pickle")
         os.remove("keys.tmp")
 
