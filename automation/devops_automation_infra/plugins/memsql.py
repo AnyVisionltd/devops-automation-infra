@@ -8,6 +8,7 @@ from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
 from pymysql.constants import CLIENT
+import copy
 
 
 class Connection(object):
@@ -82,17 +83,28 @@ class Memsql(TunneledPlugin):
         return self._host.SshDirect.execute(
             "kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
 
+    def _create_connection(self, **kwargs):
+        password = "password" if not helpers.is_k8s(self._host.SshDirect) else self._host.SshDirect.execute("kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
+        memsql_kwargs = copy.copy(kwargs)
+        memsql_kwargs.setdefault('password', password)
+        memsql_kwargs.setdefault('user', 'root')
+        return pymysql.connect(**memsql_kwargs,
+                               cursorclass=pymysql.cursors.DictCursor,
+                               client_flag=CLIENT.MULTI_STATEMENTS)
+
     def _get_connection(self):
         self.start_tunnel(self.DNS_NAME, self.PORT)
-        memsql_password = "password" if not helpers.is_k8s(self._host.SshDirect) else self._host.SshDirect.execute("kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
-        connection = pymysql.connect(host='localhost',
-                                     port=self.local_bind_port,
-                                     user='root',
-                                     password=memsql_password,
-                                     cursorclass=pymysql.cursors.DictCursor,
-                                     client_flag=CLIENT.MULTI_STATEMENTS)
+        return self._create_connection(host='localhost',
+                                       port=self.local_bind_port,
+                                       cursorclass=pymysql.cursors.DictCursor,
+                                       client_flag=CLIENT.MULTI_STATEMENTS)
 
-        return connection
+    def tunneled_connection(self, database=None):
+        tunnel = self._host.TunnelManager.get_or_create(self.DNS_NAME, self.DNS_NAME, self.PORT)
+        connection = self._create_connection(host='localhost',
+                                             port=tunnel._local_bind_port,
+                                             database=database)
+        return Connection(connection)
 
     def upsert(self, query):
         with closing(self.connection.cursor()) as cursor:
