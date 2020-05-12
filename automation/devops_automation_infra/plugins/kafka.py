@@ -254,6 +254,9 @@ class Kafka(TunneledPlugin):
     def reset_state(self):
         self.delete_all_topics()
 
+    def delete_storage_compose(self):
+        self._host.SshDirect.execute('rm -rf /storage/kafka/*')
+
 
 plugins.register('Kafka', Kafka)
 

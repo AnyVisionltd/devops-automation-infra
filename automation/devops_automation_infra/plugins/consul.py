@@ -100,6 +100,10 @@ class Consul(TunneledPlugin):
             self.delete_key("", recurse=True) # delete all consul keys
             self.transaction(payload) # reset keys using transaction
 
+
+    def delete_storage_compose(self):
+        self._host.SshDirect.execute('rm /storage/consul-data/* -rf')
+
     def verify_functionality(self):
         self.put_key('test_key', 'test_value')
         self.get_key('test_key')
