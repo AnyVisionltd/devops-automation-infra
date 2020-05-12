@@ -89,7 +89,8 @@ class Memsql(TunneledPlugin):
                                      port=self.local_bind_port,
                                      user='root',
                                      password=memsql_password,
-                                     cursorclass=pymysql.cursors.DictCursor)
+                                     cursorclass=pymysql.cursors.DictCursor,
+                                     client_flag=CLIENT.MULTI_STATEMENTS)
 
         return connection
 
