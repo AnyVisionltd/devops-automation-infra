@@ -7,6 +7,60 @@ from infra.model import plugins
 from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
+from pymysql.constants import CLIENT
+
+
+class Connection(object):
+    def __init__(self, memsql_connection):
+        self.connection = memsql_connection
+
+    def fetchall(self, query):
+        with closing(self.connection.cursor()) as c:
+            c.execute(query)
+            return c.fetchall()
+
+    def execute(self, query):
+        with closing(self.connection.cursor()) as c:
+            c.execute(query)
+
+    def truncate_all(self):
+        logging.debug('Truncating all memsql dbs')
+        truncate_commands = self.fetchall(
+                f"""select concat('truncate table ', TABLE_SCHEMA, '.', TABLE_NAME) as truncate_command
+                from information_schema.tables t
+                where TABLE_SCHEMA not in ('information_schema', 'memsql')
+                and TABLE_NAME not in ('DATABASECHANGELOG', 'DATABASECHANGELOGLOCK'); """)
+        commands = ''.join([f"{command['truncate_command']};" for command in truncate_commands])
+        self.execute(commands)
+        logging.debug('Done Truncating all memsql dbs')
+
+    @staticmethod
+    def _reset_pipeline_cmd(pipline):
+        return f"alter pipeline {pipline} set offsets earliest;"
+
+    @staticmethod
+    def _stop_pipeline_cmd(pipline):
+        return f"stop pipeline {pipline};"
+
+    @staticmethod
+    def _start_pipeline_cmd(pipline):
+        return f"start pipeline {pipline};"
+
+    def reset_pipeline(self, pipeline_name):
+        logging.debug(f'Reset pipeline {pipeline_name}')
+        cmd = Connection._stop_pipeline_cmd(pipeline_name) + Connection._reset_pipeline_cmd(pipeline_name) + Connection._start_pipeline_cmd(pipeline_name)
+        try:
+            self.connection.query(cmd)
+        except pymysql.err.InternalError as e:
+            err_code = e.args[0]
+            # This is pipeline already stopped error
+            if err_code == 1939:
+                cmd = Connection._reset_pipeline(pipeline_name) + Connection._start_pipeline_cmd(pipeline_name)
+                self.connection.query(cmd)
+        logging.debug(f'Done Reset pipeline {pipeline_name}')
+
+    def close(self):
+        self.connection.close()
 
 
 class Memsql(TunneledPlugin):
