@@ -66,7 +66,9 @@ class Consul(TunneledPlugin):
             self._consul.txn.put(chunk)
 
     def ping(self):
-        self._consul.status.leader()
+        leader = self._consul.status.leader()
+        if not leader:
+            raise Exception("Failed leader is unspecified")
 
     def get_all_keys(self):
         try:
