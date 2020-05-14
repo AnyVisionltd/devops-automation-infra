@@ -66,7 +66,9 @@ class Consul(TunneledPlugin):
             self._consul.txn.put(chunk)
 
     def ping(self):
-        self._consul.status.leader()
+        leader = self._consul.status.leader()
+        if not leader:
+            raise Exception("Failed leader is unspecified")
 
     def get_all_keys(self):
         try:
@@ -99,6 +101,10 @@ class Consul(TunneledPlugin):
             payload = self.create_kv_payload(keys)
             self.delete_key("", recurse=True) # delete all consul keys
             self.transaction(payload) # reset keys using transaction
+
+
+    def delete_storage_compose(self):
+        self._host.SshDirect.execute('rm /storage/consul-data/* -rf')
 
     def verify_functionality(self):
         self.put_key('test_key', 'test_value')

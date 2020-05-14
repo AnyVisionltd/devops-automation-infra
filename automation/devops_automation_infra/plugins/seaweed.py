@@ -132,6 +132,12 @@ class Seaweed(TunneledPlugin):
                 if bucket.name != 'static':
                     self.delete_bucket(bucket.name)
 
+    def clear_buckets(self):
+        weed_delete_cmd = """
+        echo 'collection.list' |  weed shell 2>/dev/null | grep collection: | awk -F':'  '{cmd="echo collection.delete " $2 "| weed shell"; print cmd; system(cmd)}'
+        """
+        self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
+
     def verify_functionality(self):
         self.create_bucket("test_bucket")
         self.upload_file_to_bucket("media/phase_1.png", "test_bucket", "media/phase_1.png")
