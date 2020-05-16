@@ -28,6 +28,10 @@ class Seaweed(TunneledPlugin):
             self._resource = self._s3_resource()
         return self._resource
 
+    @property
+    def remote_endpoint(self):
+        return f'http://{self.DNS_NAME}:{self.PORT}'
+
     def _s3_client(self):
         if self.local_bind_port is None:
             self.start_tunnel(self.DNS_NAME, self.PORT)
