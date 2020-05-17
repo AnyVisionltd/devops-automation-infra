@@ -19,8 +19,8 @@ class K8s(object):
         res = json.loads(self._host.SshDirect.execute(f"sudo gravity exec kubectl version {options} --output json"))
         return res['serverVersion']['gitVersion']
 
-    def scale(self, resource, replicas=20):
-        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource}    {replicas}")
+    def scale(self, name, resource_type="statefulset", replicas=1, options=""):
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource_type} --replicas={replicas} {options} {name}")
 
     def create(self, resource, options=""):
         try:
@@ -62,7 +62,7 @@ class K8s(object):
 
     def scale_deployment(self, name, replicas=100, **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs)
-        return self.scale(f"deployment {name}", f"--replicas={replicas} {options_string}")
+        return self.scale(name, "deployment", replicas, options_string)
 
     def expose_deployment(self, name, port=30015, **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs)
