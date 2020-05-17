@@ -25,6 +25,12 @@ def pod_is_live(host, ip, port, timeout=10):
         logging.error(e.output)
 
 
+@hardware_config(hardware={"host1": {}})
+def test_reset_consul_data(base_config):
+    base_config.hosts.host1.K8s.delete_statefulset_data("consul-server",label="consul")
+    base_config.hosts.host1.K8s.re_run_job("pipe-init")
+
+
 @hardware_config(hardware={"host1": {}, "host2": {}})
 def test_cluster_network_master_restart(base_config,
                                         clean_up_all_deployments_and_svcs,
