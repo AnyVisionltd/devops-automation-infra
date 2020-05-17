@@ -64,6 +64,10 @@ class K8s(object):
         options_string = convert_kwargs_to_options_string(kwargs)
         return self.scale(name, "deployment", replicas, options_string)
 
+    def scale_statefulset(self, name, replicas=1, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self.scale(name, "statefulset", replicas, options_string)
+
     def expose_deployment(self, name, port=30015, **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs)
         return self.expose(f"deployment {name}", f"--type=LoadBalancer --port={port} {options_string}")
