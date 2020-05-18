@@ -95,9 +95,7 @@ class Memsql(TunneledPlugin):
     def _get_connection(self):
         self.start_tunnel(self.DNS_NAME, self.PORT)
         return self._create_connection(host='localhost',
-                                       port=self.local_bind_port,
-                                       cursorclass=pymysql.cursors.DictCursor,
-                                       client_flag=CLIENT.MULTI_STATEMENTS)
+                                       port=self.local_bind_port)
 
     def tunneled_connection(self, database=None):
         tunnel = self._host.TunnelManager.get_or_create(self.DNS_NAME, self.DNS_NAME, self.PORT)
