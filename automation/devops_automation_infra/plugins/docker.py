@@ -40,7 +40,7 @@ class Docker(object):
         self._ssh_direct.execute(cmd)
 
     def run_container_by_service(self, servce_name):
-        cmd = self._container_by_name_cmd(servce_name) + f"| xargs {self._docker_bin} start --attach"
+        cmd = self._container_by_name_cmd(servce_name) + f"| xargs -I{{}} {self._docker_bin} start {{}}"
         self._ssh_direct.execute(cmd)
 
     def run_cmd_in_service(self, service_name, cmd):
