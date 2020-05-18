@@ -1,5 +1,6 @@
 import json
 import logging
+import tempfile
 
 from automation_infra.utils.waiter import wait_for_predicate, wait_for_predicate_nothrow, await_changing_result
 from devops_automation_infra.utils.k8s_utils import write_configmap_json_to_tmp_dir
@@ -255,6 +256,20 @@ class K8s(object):
     def all_deployments_pods_running(self, name):
         return wait_for_predicate_nothrow(lambda: self.number_ready_pods_in_deployment(name) ==
                                            len(self.get_pods_using_selector_labels(label_value=name)['items']))
+
+    def re_run_job(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        job_dict = self.get_job(name, **kwargs)
+        del job_dict['spec']['selector']
+        del job_dict['spec']['template']['metadata']['labels']
+        del job_dict['status']
+        tmp_file = tempfile.NamedTemporaryFile(dir='/tmp',delete=True)
+        with open(tmp_file.name, 'w') as f:
+            json.dump(job_dict, f)
+            f.flush()
+            self._host.SshDirect.put(tmp_file.name, remotedir='/tmp')
+            self._host.SshDirect.execute(f"sudo gravity exec kubectl replace --force -f /host/{tmp_file.name} {options_string}")
+        wait_for_predicate_nothrow(lambda: self.get_job(name)['status']['succeeded'] == 1, 180)
 
     def delete_app_data(self, name, label_value=None, label_name="app", resource_type="statefulset"):
         label_value = label_value or name
