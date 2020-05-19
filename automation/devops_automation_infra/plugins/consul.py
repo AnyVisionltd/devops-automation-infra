@@ -4,21 +4,30 @@ import sshtunnel
 import base64
 import consul
 from munch import Munch
-from automation_infra.plugins.base_plugin import TunneledPlugin
+from automation_infra.plugins import tunnel_manager
 from infra.model import plugins
 from pytest_automation_infra import helpers
 
 
-class Consul(TunneledPlugin):
+class Consul(object):
     def __init__(self, host):
-        super().__init__(host)
+        self._host = host
         self.DNS_NAME = 'consul.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'consul-server.default.svc.cluster.local'
         self.PORT = 8500
-        self.start_tunnel(self.DNS_NAME, self.PORT)
-        self._consul = consul.Consul("localhost", self.local_bind_port)
         self.DEFAULT_KEY = "DEFAULT"
         self.OVERRIDE_KEY = "OVERRIDE"
         self.APPLICATION_KEY = "APPLICATION"
+
+    @property
+    def tunnel(self):
+        return self._host.TunnelManager.get_or_create('consul', self.DNS_NAME, self.PORT)
+
+    def create_client(self):
+        return consul.Consul(*self.tunnel.host_port)
+
+    @property
+    def _consul(self):
+        return self.create_client()
 
     def get_services(self):
         return self._consul.catalog.services()[1]
@@ -62,8 +71,9 @@ class Consul(TunneledPlugin):
             yield payload[i:i + size]
 
     def transaction(self, payload):
+        client = self._consul
         for chunk in self.divide_chunks(payload, 64):
-            self._consul.txn.put(chunk)
+            client.txn.put(chunk)
 
     def ping(self):
         leader = self._consul.status.leader()
