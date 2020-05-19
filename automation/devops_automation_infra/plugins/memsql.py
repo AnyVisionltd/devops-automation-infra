@@ -88,9 +88,9 @@ class Memsql(TunneledPlugin):
         memsql_kwargs = copy.copy(kwargs)
         memsql_kwargs.setdefault('password', password)
         memsql_kwargs.setdefault('user', 'root')
-        return pymysql.connect(**memsql_kwargs,
-                               cursorclass=pymysql.cursors.DictCursor,
-                               client_flag=CLIENT.MULTI_STATEMENTS)
+        memsql_kwargs.setdefault('client_flag', CLIENT.MULTI_STATEMENTS)
+        memsql_kwargs.setdefault('cursorclass', pymysql.cursors.DictCursor)
+        return pymysql.connect(**memsql_kwargs)
 
     def _get_connection(self):
         self.start_tunnel(self.DNS_NAME, self.PORT)
