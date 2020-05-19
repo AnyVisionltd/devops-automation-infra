@@ -160,7 +160,6 @@ class Memsql(TunneledPlugin):
 
     def verify_functionality(self):
         dbs = self.fetch_all("show databases")
-        logging.info("<<<<<<<MEMSQL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>.")
 
 
 plugins.register('Memsql', Memsql)
