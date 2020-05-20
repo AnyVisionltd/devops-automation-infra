@@ -1,5 +1,6 @@
 import json
 import logging
+import tempfile
 
 from automation_infra.utils.waiter import wait_for_predicate, wait_for_predicate_nothrow, await_changing_result
 from devops_automation_infra.utils.k8s_utils import write_configmap_json_to_tmp_dir
@@ -19,8 +20,8 @@ class K8s(object):
         res = json.loads(self._host.SshDirect.execute(f"sudo gravity exec kubectl version {options} --output json"))
         return res['serverVersion']['gitVersion']
 
-    def scale(self, resource, replicas=20):
-        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource}    {replicas}")
+    def scale(self, name, resource_type="statefulset", replicas=1, options=""):
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl scale {resource_type} --replicas={replicas} {options} {name}")
 
     def create(self, resource, options=""):
         try:
@@ -35,6 +36,10 @@ class K8s(object):
 
     def get(self, resource, options=""):
         res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get {resource} {options} --output json")
+        return json.loads(res)
+
+    def get_resource(self, name, resource_type, options=""):
+        res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get {resource_type} {name} {options} --output json")
         return json.loads(res)
 
     def apply(self, command=""):
@@ -62,7 +67,11 @@ class K8s(object):
 
     def scale_deployment(self, name, replicas=100, **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs)
-        return self.scale(f"deployment {name}", f"--replicas={replicas} {options_string}")
+        return self.scale(name, "deployment", replicas, options_string)
+
+    def scale_statefulset(self, name, replicas=1, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self.scale(name, "statefulset", replicas, options_string)
 
     def expose_deployment(self, name, port=30015, **kwargs):
         options_string = convert_kwargs_to_options_string(kwargs)
@@ -146,9 +155,52 @@ class K8s(object):
         options_string = convert_kwargs_to_options_string(kwargs)
         self.delete(resource=f"pod {service_name_selector_query}", options=options_string)
 
+    def delete_pod_by_label(self, label_value, label_name="app", force="false", grace_period=60 , **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        self._host.SshDirect.execute(f"sudo gravity exec kubectl delete pod --force={force} --grace-period={grace_period} --selector={label_name}={label_value} {options_string}")
+
+    def delete_pv(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl delete pv {name} {options_string}")
+
+    def delete_pvc(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl delete pvc {name} {options_string}")
+
+    def get_pvc_by_pod_name(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl get pod {name} -o jsonpath='{{.spec.volumes..claimName}}' {options_string}")
+
+    def get_pv_by_pvc_name(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        return self._host.SshDirect.execute(f"sudo gravity exec kubectl get pvc {name} -o jsonpath='{{.spec.volumeName}}' {options_string}")
+         
+    def set_pv_reclaim_policy(self, name, policy, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        logging.debug(f'sudo gravity exec kubectl patch pv {name} -p \'{{"spec":{{"persistentVolumeReclaimPolicy":"{policy}"}}}}\' {options_string}')
+        return self._host.SshDirect.execute(f'sudo gravity exec kubectl patch pv {name} -p \'{{"spec":{{"persistentVolumeReclaimPolicy":"{policy}"}}}}\' {options_string}')
+
     def number_ready_pods_in_deployment(self, name):
         try:
             res = self.get_deployment(name)
+            return res['status']['readyReplicas']
+        # The readyReplicas value isn't initialized by the k8s api immediately after the adding
+        # of replicas so we need to wait for it to appear
+        except KeyError:
+            return 0
+
+    def num_of_pod_replicas(self, name, resource_type="statefulset"):
+        try:
+            res = self.get_resource(name, resource_type)
+            return res['status']['replicas']
+        # The readyReplicas value isn't initialized by the k8s api immediately after the adding
+        # of replicas so we need to wait for it to appear
+        except KeyError:
+            return 0
+
+    def num_of_ready_pod_replicas(self, name, resource_type="statefulset"):
+        try:
+            res = self.get_resource(name, resource_type)
             return res['status']['readyReplicas']
         # The readyReplicas value isn't initialized by the k8s api immediately after the adding
         # of replicas so we need to wait for it to appear
@@ -181,8 +233,14 @@ class K8s(object):
                 logging.warning(f"Node:{node_name} already tainted with this taint: {options}")
                 pass
 
-    def get_statefulset(self, name):
-        res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get statefulset {name} --output json")
+    def get_statefulset(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get statefulset {name} --output json {options_string}")
+        return json.loads(res)
+
+    def get_job(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get job {name} --output json {options_string}")
         return json.loads(res)
 
     def get_all_sts_replicas_number(self, name):
@@ -199,5 +257,49 @@ class K8s(object):
         return wait_for_predicate_nothrow(lambda: self.number_ready_pods_in_deployment(name) ==
                                            len(self.get_pods_using_selector_labels(label_value=name)['items']))
 
+    def re_run_job(self, name, **kwargs):
+        options_string = convert_kwargs_to_options_string(kwargs)
+        job_dict = self.get_job(name, **kwargs)
+        del job_dict['spec']['selector']
+        del job_dict['spec']['template']['metadata']['labels']
+        del job_dict['status']
+        tmp_file = tempfile.NamedTemporaryFile(dir='/tmp',delete=True)
+        with open(tmp_file.name, 'w') as f:
+            json.dump(job_dict, f)
+            f.flush()
+            self._host.SshDirect.put(tmp_file.name, remotedir='/tmp')
+            self._host.SshDirect.execute(f"sudo gravity exec kubectl replace --force -f /host/{tmp_file.name} {options_string}")
+        wait_for_predicate_nothrow(lambda: self.get_job(name)['status']['succeeded'] == 1, 180)
+
+    def delete_app_data(self, name, label_value=None, label_name="app", resource_type="statefulset"):
+        label_value = label_value or name
+        logging.debug(f"get {name} {resource_type} pods")
+        pod_list = self.get_pods_using_selector_labels(label_name=label_name ,label_value=label_value)['items']
+        num_of_pods = len(pod_list)
+        if num_of_pods == 0:
+            raise Exception(f"unable to find {name} {resource_type} pods")
+        pvc_list = []
+        pv_list = []
+        for pod in pod_list:
+            pod_name = pod["metadata"]["name"]
+            logging.debug(f"get pvc name from {name} pod")
+            pvc_name = self.get_pvc_by_pod_name(pod_name)
+            pvc_list.append(pvc_name)
+            logging.debug(f"get pv name from {pvc_name} pvc")
+            pv_name = self.get_pv_by_pvc_name(pvc_name)
+            pv_list.append(pv_name)
+        for pv in pv_list:
+            logging.debug(f"set reclaim policy \"Delete\" to {pv} pv")
+            self.set_pv_reclaim_policy(pv, "Delete")
+        logging.debug(f"scale down {resource_type}: {name}")
+        self.scale(name, resource_type, replicas=0)
+        self.delete_pod_by_label(label_value, label_name, "true", 0)
+        wait_for_predicate(lambda: self.num_of_pod_replicas(name, resource_type) == 0, 120)
+        for pvc in pvc_list:
+            logging.debug(f"delete {pvc} pvc")
+            self.delete_pvc(pvc)
+        logging.debug(f"scale up {resource_type} {name}")
+        self.scale(name, resource_type, replicas=num_of_pods)
+        wait_for_predicate_nothrow(lambda: self.num_of_ready_pod_replicas(name, resource_type) == num_of_pods, 180)
 
 plugins.register("K8s", K8s)
