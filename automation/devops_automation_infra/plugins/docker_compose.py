@@ -28,9 +28,11 @@ class DockerCompose(object):
         logging.debug(f"pulling docker images from compose {compose_file_path}")
         self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} pull', timeout=60*60)
 
-    def compose_up(self, compose_file_path):
-        logging.debug(f"starting compose {compose_file_path}")
-        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} up -d', timeout=60*20)
+    def compose_up(self, compose_file_path, *services):
+        services_cmd = " ".join(services)
+        logging.debug(f"starting compose {compose_file_path} services: ")
+        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} up -d {services_cmd}', timeout=60*20)
+
 
     def restart_container_by_service_name(self, compose_file_path, container):
         try:

@@ -28,6 +28,10 @@ class Seaweed(TunneledPlugin):
             self._resource = self._s3_resource()
         return self._resource
 
+    @property
+    def remote_endpoint(self):
+        return f'http://{self.DNS_NAME}:{self.PORT}'
+
     def _s3_client(self):
         if self.local_bind_port is None:
             self.start_tunnel(self.DNS_NAME, self.PORT)
@@ -133,9 +137,7 @@ class Seaweed(TunneledPlugin):
                     self.delete_bucket(bucket.name)
 
     def clear_buckets(self):
-        weed_delete_cmd = """
-        echo 'collection.list' |  weed shell 2>/dev/null | grep collection: | awk -F':'  '{cmd="echo collection.delete " $2 "| weed shell"; print cmd; system(cmd)}'
-        """
+        weed_delete_cmd = """echo 'collection.list' |  weed shell 2>/dev/null | grep collection: | awk -F':'  '{cmd="echo collection.delete " $2 "| weed shell"; print cmd; system(cmd)}'"""
         self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
 
     def verify_functionality(self):
