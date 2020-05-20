@@ -34,9 +34,9 @@ class Docker(object):
         cmd = self._container_by_name_cmd(service_name) + f"| xargs --no-run-if-empty {self._docker_bin} restart"
         self._ssh_direct.execute(cmd)
 
-    def kill_container_by_service(self, service_name, signal='kill'):
+    def kill_container_by_service(self, service_name, signal='KILL'):
         logging.debug(f"Kill container {service_name}")
-        cmd = self._running_container_by_name_cmd(service_name) + f"| xargs --no-run-if-empty {self._docker_bin} kill --signal=kill"
+        cmd = self._running_container_by_name_cmd(service_name) + f"| xargs --no-run-if-empty {self._docker_bin} kill --signal={signal}"
         self._ssh_direct.execute(cmd)
 
     def run_container_by_service(self, servce_name):

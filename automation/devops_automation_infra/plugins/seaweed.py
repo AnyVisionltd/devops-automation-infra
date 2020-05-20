@@ -1,4 +1,5 @@
 import logging
+import tempfile
 
 from infra.model import plugins
 from automation_infra.plugins.base_plugin import TunneledPlugin
@@ -141,10 +142,17 @@ class Seaweed(TunneledPlugin):
         self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
 
     def verify_functionality(self):
+        try:
+            self.delete_bucket("test_bucket")
+        except ClientError as e:
+            pass  # doesnt exist
         self.create_bucket("test_bucket")
-        self.upload_file_to_bucket("media/phase_1.png", "test_bucket", "media/phase_1.png")
+        f = tempfile.NamedTemporaryFile(delete=True)
+        f.write("content".encode())
+        f.flush()
+        self.upload_fileobj(f, "test_bucket", "temp/test.tmp")
         bucket_files = self.get_bucket_files('test_bucket')
-        assert bucket_files == ['media/phase_1.png']
+        assert bucket_files == ['temp/test.tmp'], f'bucket files: {bucket_files}'
         self.delete_bucket("test_bucket")
         logging.info(f"<<<<<<<<<<<<<SEAWEED PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 

@@ -30,7 +30,7 @@ class Kafka(object):
     def _create_connection(self):
         tunnel = self._host.TunnelManager.get_or_create('kafka', self._host.ip, Kafka.RPYC_PORT)
         return waiter.wait_for_predicate_nothrow(
-            lambda: rpyc.connect(self._host.ip, tunnel.local_port, config={'allow_all_attrs': True, 'sync_request_timeout': 120}),
+            lambda: rpyc.connect(*tunnel.host_port, config={'allow_all_attrs': True, 'sync_request_timeout': 120}),
             timeout=10)
 
     def create_client(self):
@@ -56,7 +56,7 @@ class Kafka(object):
         container.start_container_by_service(self._host, "kafka")
 
     def delete_storage_compose(self):
-        self._host.SshDirect.execute('rm -rf /storage/kafka/*')
+        self._host.SshDirect.execute('sudo rm -rf /storage/kafka/*')
 
 
 plugins.register('Kafka', Kafka)
