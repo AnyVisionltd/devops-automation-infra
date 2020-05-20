@@ -69,11 +69,15 @@ class Kafka(object):
         except Exception as e:
             if e.message == 'UNKNOWN_TOPIC_OR_PARTITION':
                 pass
-        logging.debug("create topic obj")
 
+        logging.debug("create topic obj")
         rtopic_obj = self.rpyc.root.create_topic_object(automation_tests_topic)
         logging.debug("create topics")
-        admin.create_topics([rtopic_obj])
+        topics = self.get_topics()
+        assert automation_tests_topic not in topics, f"topic should not exist but it does"
+        waiter.wait_for_predicate_nothrow(lambda: admin.create_topics([rtopic_obj]))
+        topics = self.get_topics()
+        assert automation_tests_topic in topics, f"topic should exist but doesnt"
 
         logging.debug("get consumer")
         consumer = self.get_consumer(automation_tests_topic, auto_offset_reset='earliest',
