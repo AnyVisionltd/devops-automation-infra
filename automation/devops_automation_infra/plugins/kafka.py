@@ -56,7 +56,7 @@ class Kafka(object):
         container.start_container_by_service(self._host, "kafka")
 
     def delete_storage_compose(self):
-        self._host.SshDirect.execute('rm -rf /storage/kafka/*')
+        self._host.SshDirect.execute('sudo rm -rf /storage/kafka/*')
 
 
 plugins.register('Kafka', Kafka)
