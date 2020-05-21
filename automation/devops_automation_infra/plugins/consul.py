@@ -123,7 +123,6 @@ class Consul(object):
         self.delete_key('test_key')
         first_service = next(iter(self.get_services()))
         self._consul.health.service(first_service)[1]
-        logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
 
 plugins.register('Consul', Consul)
