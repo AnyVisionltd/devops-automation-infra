@@ -37,6 +37,12 @@ class Kafka(object):
         self._start_server()
         return kafka_client.Kafka(self._create_connection())
 
+    def get_initialized_kafka_client(self):
+        self.start()
+        waiter.wait_for_predicate_nothrow(lambda: self.ping(), timeout=10)
+        kafka_client = self.create_client()
+        return kafka_client
+
     def ping(self):
         return self.create_client().ping()
 
