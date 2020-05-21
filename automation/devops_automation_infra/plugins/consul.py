@@ -114,7 +114,7 @@ class Consul(object):
 
 
     def delete_storage_compose(self):
-        self._host.SshDirect.execute('rm /storage/consul-data/* -rf')
+        self._host.SshDirect.execute('sudo rm /storage/consul-data/* -rf')
 
     def verify_functionality(self):
         self.put_key('test_key', 'test_value')
