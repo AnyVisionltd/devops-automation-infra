@@ -79,6 +79,7 @@ class Consul(object):
         leader = self._consul.status.leader()
         if not leader:
             raise Exception("Failed leader is unspecified")
+        return leader
 
     def get_all_keys(self):
         try:
