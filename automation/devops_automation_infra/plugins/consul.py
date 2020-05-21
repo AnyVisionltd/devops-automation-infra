@@ -55,6 +55,13 @@ class Consul(object):
         res = self._consul.kv.get(key)[1]['Value']
         return res
 
+    def get_key_if_exists(self, key):
+        value = None
+        res = self._consul.kv.get(key)[1]
+        if res is not None:
+            value = res['Value']
+        return value
+
     def delete_key(self, key, recurse=None):
         res = self._consul.kv.delete(key, recurse=recurse)
         return res

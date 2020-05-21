@@ -118,9 +118,9 @@ class Seaweed(TunneledPlugin):
     def get_files_in_dir(self, bucket_name, dir_path):
         result = []
         resp = self.client.list_objects_v2(Bucket=bucket_name, Prefix=dir_path, Delimiter='/')
-        for obj in resp['Contents']:
-            result.append(obj['Key'])
-        return result
+        if 'Contents' not in resp.keys():
+            return
+        return [obj['Key'] for obj in resp['Contents']]
 
     def delete_file(self, bucket_name, file_name):
         self.client.delete_object(Bucket=bucket_name, Key=file_name)
