@@ -1,7 +1,5 @@
-import json
 import logging
 
-from automation_infra.utils.waiter import wait_for_predicate
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
@@ -52,4 +50,4 @@ class Docker(object):
         return  self._ssh_direct.execute(cmd).strip()
 
 
-plugins.register("Docker", Docker) 
+plugins.register("Docker", Docker)
