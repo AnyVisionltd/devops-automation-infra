@@ -1,4 +1,5 @@
 import logging
+import tempfile
 
 from infra.model import plugins
 from automation_infra.plugins.base_plugin import TunneledPlugin
@@ -27,6 +28,10 @@ class Seaweed(TunneledPlugin):
         if self._resource is None:
             self._resource = self._s3_resource()
         return self._resource
+
+    @property
+    def remote_endpoint(self):
+        return f'http://{self.DNS_NAME}:{self.PORT}'
 
     def _s3_client(self):
         if self.local_bind_port is None:
@@ -113,9 +118,9 @@ class Seaweed(TunneledPlugin):
     def get_files_in_dir(self, bucket_name, dir_path):
         result = []
         resp = self.client.list_objects_v2(Bucket=bucket_name, Prefix=dir_path, Delimiter='/')
-        for obj in resp['Contents']:
-            result.append(obj['Key'])
-        return result
+        if 'Contents' not in resp.keys():
+            return
+        return [obj['Key'] for obj in resp['Contents']]
 
     def delete_file(self, bucket_name, file_name):
         self.client.delete_object(Bucket=bucket_name, Key=file_name)
@@ -133,16 +138,21 @@ class Seaweed(TunneledPlugin):
                     self.delete_bucket(bucket.name)
 
     def clear_buckets(self):
-        weed_delete_cmd = """
-        echo 'collection.list' |  weed shell 2>/dev/null | grep collection: | awk -F':'  '{cmd="echo collection.delete " $2 "| weed shell"; print cmd; system(cmd)}'
-        """
+        weed_delete_cmd = """echo 'collection.list' |  weed shell 2>/dev/null | grep collection: | awk -F':'  '{cmd="echo collection.delete " $2 "| weed shell"; print cmd; system(cmd)}'"""
         self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
 
     def verify_functionality(self):
+        try:
+            self.delete_bucket("test_bucket")
+        except ClientError as e:
+            pass  # doesnt exist
         self.create_bucket("test_bucket")
-        self.upload_file_to_bucket("media/phase_1.png", "test_bucket", "media/phase_1.png")
+        f = tempfile.NamedTemporaryFile(delete=True)
+        f.write("content".encode())
+        f.flush()
+        self.upload_fileobj(f, "test_bucket", "temp/test.tmp")
         bucket_files = self.get_bucket_files('test_bucket')
-        assert bucket_files == ['media/phase_1.png']
+        assert bucket_files == ['temp/test.tmp'], f'bucket files: {bucket_files}'
         self.delete_bucket("test_bucket")
         logging.info(f"<<<<<<<<<<<<<SEAWEED PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
