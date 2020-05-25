@@ -55,6 +55,19 @@ class Kafka(object):
         else:
             raise Exception("Infra doesnt know how to reset_state of kafka on K8s")
 
+    def _create_topic_object(self, name):
+        return self.rpyc.root.create_topic_object(name)
+
+    def create_topic(self, name):
+        topics = self.get_topics()
+        assert name not in topics, f"topic should not exist but it does"
+        rtopic_obj = self._create_topic_object(name)
+        admin = self.get_admin()
+        waiter.wait_for_predicate_nothrow(lambda: admin.create_topics([rtopic_obj]))
+        topics = self.get_topics()
+        assert name in topics, f"topic should exist but doesnt"
+        return True
+
     def verify_functionality(self):
         logging.debug("verifying kafka functionality")
         automation_tests_topic = 'anv.automation.topic1'
@@ -70,14 +83,8 @@ class Kafka(object):
             if e.message == 'UNKNOWN_TOPIC_OR_PARTITION':
                 pass
 
-        logging.debug("create topic obj")
-        rtopic_obj = self.rpyc.root.create_topic_object(automation_tests_topic)
         logging.debug("create topics")
-        topics = self.get_topics()
-        assert automation_tests_topic not in topics, f"topic should not exist but it does"
-        waiter.wait_for_predicate_nothrow(lambda: admin.create_topics([rtopic_obj]))
-        topics = self.get_topics()
-        assert automation_tests_topic in topics, f"topic should exist but doesnt"
+        self.create_topic(automation_tests_topic)
 
         logging.debug("get consumer")
         consumer = self.get_consumer(automation_tests_topic, auto_offset_reset='earliest',
