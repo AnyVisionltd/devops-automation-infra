@@ -4,7 +4,7 @@ import pymysql
 from pymysql import InternalError
 
 from infra.model import plugins
-from automation_infra.plugins.base_plugin import TunneledPlugin
+from automation_infra.plugins import tunnel_manager
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
 from pymysql.constants import CLIENT
@@ -19,6 +19,18 @@ class Connection(object):
         with closing(self.connection.cursor()) as c:
             c.execute(query)
             return c.fetchall()
+
+    def fetch_one(self, query):
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(query)
+            res = cursor.fetchone()
+        return res
+
+    def fetch_count(self, query):
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(query)
+            res = cursor.fetchone()
+        return res['count']
 
     def execute(self, query):
         with closing(self.connection.cursor()) as c:
@@ -64,18 +76,26 @@ class Connection(object):
         self.connection.close()
 
 
-class Memsql(TunneledPlugin):
+class Memsql(object):
     def __init__(self, host):
-        super().__init__(host)
+        self._host = host
         self.DNS_NAME = 'memsql.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'memsql.default.svc.cluster.local'
         self.PORT = 3306
         self._connection = None
 
     @property
     def connection(self):
-        if self._connection is None:
-            self._connection = self._get_connection()
-        return self._connection
+        host, port = self.tunnel.host_port
+        return self._create_connection(host=host,
+                                       port=port,
+                                       cursorclass=pymysql.cursors.DictCursor,
+                                       client_flag=CLIENT.MULTI_STATEMENTS)
+
+    def tunneled_connection(self, database=None):
+        host, port = self.tunnel.host_port
+        return self._create_connection(host=host,
+                                       port=port,
+                                       database=database)
 
     @property
     def password(self):
@@ -90,45 +110,20 @@ class Memsql(TunneledPlugin):
         memsql_kwargs.setdefault('user', 'root')
         memsql_kwargs.setdefault('client_flag', CLIENT.MULTI_STATEMENTS)
         memsql_kwargs.setdefault('cursorclass', pymysql.cursors.DictCursor)
-        return pymysql.connect(**memsql_kwargs)
+        return Connection(pymysql.connect(**memsql_kwargs))
 
-    def _get_connection(self):
-        self.start_tunnel(self.DNS_NAME, self.PORT)
-        return self._create_connection(host='localhost',
-                                       port=self.local_bind_port,
-                                       cursorclass=pymysql.cursors.DictCursor,
-                                       client_flag=CLIENT.MULTI_STATEMENTS)
-
-    def tunneled_connection(self, database=None):
-        tunnel = self._host.TunnelManager.get_or_create(self.DNS_NAME, self.DNS_NAME, self.PORT)
-        connection = self._create_connection(host='localhost',
-                                             port=tunnel._local_bind_port,
-                                             database=database)
-        return Connection(connection)
-
-    def upsert(self, query):
-        with closing(self.connection.cursor()) as cursor:
-            res = cursor.execute(query)
-        self.connection.commit()
-        return res
+    @property
+    def tunnel(self):
+        return self._host.TunnelManager.get_or_create(self.DNS_NAME, self.DNS_NAME, self.PORT)
 
     def fetch_all(self, query):
-        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
-            cursor.execute(query)
-            res = cursor.fetchall()
-        return res
+        return self.connection.fetchall(query)
 
     def fetch_one(self, query):
-        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
-            cursor.execute(query)
-            res = cursor.fetchone()
-        return res
+        return self.connection.fetch_one(query)
 
     def fetch_count(self, query):
-        with closing(self.connection.cursor(pymysql.cursors.DictCursor)) as cursor:
-            cursor.execute(query)
-            res = cursor.fetchone()
-        return res['count']
+        return self.connection.fetch_count(query)
 
     def truncate(self, schema):
         truncate_commands = self.fetch_all(
