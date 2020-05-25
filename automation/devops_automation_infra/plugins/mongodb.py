@@ -31,7 +31,7 @@ class Mongodb(object):
         currently works when putting cardentials on mongo in compose
         uri = f"mongodb://{username}:{password}@{tunneled_host}:{tunneled_port}/{dbname}?authSource={auth_source_db}"
         """
-        uri = f"mongodb://{username}:{password}@{tunneled_host}:{tunneled_port}/{dbname}?authSource={auth_source_db}" #currently works due to no cradentials on mongo in compose
+        uri = f"mongodb://{tunneled_host}:{tunneled_port}/{dbname}?authSource={auth_source_db}" #currently works due to no cradentials on mongo in compose
         connection = MongoClient(uri)
         return connection
 
