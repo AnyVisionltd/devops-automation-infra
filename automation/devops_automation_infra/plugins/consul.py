@@ -132,5 +132,15 @@ class Consul(object):
         logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
 
+    def get_key_layered(self, service_name, key):
+        layers_read_order = [self.OVERRIDE_KEY, self.APPLICATION_KEY, self.DEFAULT_KEY]
+        for layer in layers_read_order:
+            layered_key = f"{layer}/{service_name}/{key}"
+            value = self.get_key_if_exists(layered_key)
+            if value is not None:
+                return value
+        return None
+
+
 plugins.register('Consul', Consul)
 
