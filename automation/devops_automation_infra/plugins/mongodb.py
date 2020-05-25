@@ -6,17 +6,14 @@ from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra.helpers import hardware_config
 
 
-class Mongodb(TunneledPlugin):
+class Mongodb(object):
     def __init__(self, host):
-        super().__init__(host)
+        self._host = host
         self.DNS_NAME = 'mongodb.tls.ai'
         self.PORT = 27017
-        self._connection = {}
 
     def connection(self, dbname):
-        if dbname not in self._connection:
-            self._connection[dbname] = self._get_connection(dbname=dbname)
-        return self._connection[dbname]
+        return self._get_connection(dbname=dbname)
 
     @property
     def tunnel(self):
@@ -34,7 +31,7 @@ class Mongodb(TunneledPlugin):
         currently works when putting cardentials on mongo in compose
         uri = f"mongodb://{username}:{password}@{tunneled_host}:{tunneled_port}/{dbname}?authSource={auth_source_db}"
         """
-        uri = f"mongodb://{tunneled_host}:{tunneled_port}/{dbname}?authSource={auth_source_db}" #currently works due to no cradentials on mongo in compose
+        uri = f"mongodb://{username}:{password}@{tunneled_host}:{tunneled_port}/{dbname}?authSource={auth_source_db}" #currently works due to no cradentials on mongo in compose
         connection = MongoClient(uri)
         return connection
 
@@ -46,7 +43,8 @@ class Mongodb(TunneledPlugin):
 
     def verify_functionality(self):
         mongodb_conn = self.connection(dbname='admin')
-        mongodb_conn.list_database_names()
+        mongodb_dbs_list = mongodb_conn.list_database_names()
+        assert len(mongodb_dbs_list) > 0
         logging.info("<<<<<<<MONGODB PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
 
