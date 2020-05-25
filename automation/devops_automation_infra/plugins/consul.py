@@ -86,6 +86,7 @@ class Consul(object):
         leader = self._consul.status.leader()
         if not leader:
             raise Exception("Failed leader is unspecified")
+        return leader
 
     def get_all_keys(self):
         try:
@@ -129,7 +130,6 @@ class Consul(object):
         self.delete_key('test_key')
         first_service = next(iter(self.get_services()))
         self._consul.health.service(first_service)[1]
-        logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
 
 plugins.register('Consul', Consul)
