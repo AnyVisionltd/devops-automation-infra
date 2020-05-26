@@ -36,6 +36,12 @@ class Connection(object):
         with closing(self.connection.cursor()) as c:
             c.execute(query)
 
+    def upsert(self, query):
+        with closing(self.connection.cursor()) as cursor:
+            res = cursor.execute(query)
+        self.connection.commit()
+        return res
+
     def truncate_all(self):
         logging.debug('Truncating all memsql dbs')
         truncate_commands = self.fetchall(
@@ -124,6 +130,9 @@ class Memsql(object):
 
     def fetch_count(self, query):
         return self.connection.fetch_count(query)
+
+    def upsert(self, query):
+        return self.connection.upsert(query)
 
     def truncate(self, schema):
         truncate_commands = self.fetch_all(
