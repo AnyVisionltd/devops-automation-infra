@@ -35,6 +35,7 @@ class Connection(object):
     def execute(self, query):
         with closing(self.connection.cursor()) as c:
             c.execute(query)
+        self.connection.commit()
 
     def truncate_all(self):
         logging.debug('Truncating all memsql dbs')
