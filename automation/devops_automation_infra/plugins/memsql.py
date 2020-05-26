@@ -126,20 +126,6 @@ class Memsql(object):
     def fetch_count(self, query):
         return self.connection.fetch_count(query)
 
-    def truncate(self, schema):
-        truncate_commands = self.fetch_all(
-            f"""select concat('truncate table ', TABLE_SCHEMA, '.', TABLE_NAME) as truncate_command
-            from information_schema.tables t 
-            where TABLE_SCHEMA = '{schema}'
-            and TABLE_NAME not in ('DATABASECHANGELOG', 'DATABASECHANGELOGLOCK'); """)
-        for command_dict in truncate_commands:
-            try:
-                logging.debug(f"running command {command_dict['truncate_command']}")
-                self.upsert(command_dict['truncate_command'])
-            except InternalError as e:
-                command_dict['truncate_command']
-                logging.debug("failed to truncate table")
-
     def ping(self):
         try:
             return self.fetch_all("show databases")
@@ -147,21 +133,10 @@ class Memsql(object):
             raise ConnectionError("Error connecting to Memsql db")
 
     def reset_state(self):
-        query = "show databases"
-        res = self.fetch_all(query)
-        dbs = [db['Database'] for db in res]
-        for db in dbs:
-            if db != 'information_schema':
-                self.truncate(db)
+        self.connection.truncate_all()
 
     def verify_functionality(self):
         dbs = self.fetch_all("show databases")
 
 
 plugins.register('Memsql', Memsql)
-
-
-@hardware_config(hardware={"host": {}})
-def test_basic(base_config):
-    memsql = base_config.hosts.host.Memsql
-    memsql.verify_functionality()
