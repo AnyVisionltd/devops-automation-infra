@@ -9,13 +9,18 @@ import boto3
 import os
 
 
-class Seaweed(TunneledPlugin):
+class Seaweed(object):
     def __init__(self, host):
-        super().__init__(host)
+        self._host = host
         self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-s3.default.svc.cluster.local'
         self.PORT = 8333
         self._client = None
         self._resource = None
+
+
+    @property
+    def tunnel(self):
+        return self._host.TunnelManager.get_or_create(self.DNS_NAME, self.DNS_NAME, self.PORT)
 
     @property
     def client(self):
@@ -33,25 +38,20 @@ class Seaweed(TunneledPlugin):
     def remote_endpoint(self):
         return f'http://{self.DNS_NAME}:{self.PORT}'
 
-    def _s3_client(self):
-        if self.local_bind_port is None:
-            self.start_tunnel(self.DNS_NAME, self.PORT)
+    def _endpoint_uri(self):
+        host, port = self.tunnel.host_port
+        return f'http://{host}:{port}'
 
-        s3_endpoint_url = f'http://localhost:{self.local_bind_port}'
-        return boto3.client('s3', endpoint_url=s3_endpoint_url,
+    def _s3_client(self):
+        return boto3.client('s3', endpoint_url=self._endpoint_uri(),
                           aws_secret_access_key='any',
                           aws_access_key_id='any')
 
 
     def _s3_resource(self):
-        if self.local_bind_port is None:
-            self.start_tunnel(self.DNS_NAME, self.PORT)
-
-        s3_endpoint_url = f'http://localhost:{self.local_bind_port}'
-        return boto3.resource('s3', endpoint_url=s3_endpoint_url,
+        return boto3.resource('s3', endpoint_url=self._endpoint_uri(),
                           aws_secret_access_key='any',
                           aws_access_key_id='any')
-        
 
     def get_bucket_files(self, bucket_name, recursive=True):
         return self.get_files_by_prefix(bucket_name, '', recursive)
