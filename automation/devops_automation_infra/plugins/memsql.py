@@ -58,6 +58,21 @@ class Connection(object):
     @staticmethod
     def _start_pipeline_cmd(pipline):
         return f"start pipeline {pipline};"
+    
+    @staticmethod
+    def _drop_pipeline_cmd(pipline):
+        return f"drop pipeline {pipline};"
+    
+    @staticmethod
+    def _create_pipeline(pipline):
+        return "CREATE PIPELINE `load_kafka_tracks` " + \
+           "AS LOAD DATA KAFKA 'kafka.tls.ai:9092/anv.tracks.collate.new-tracks' " +\
+           "BATCH_INTERVAL 500 " +\
+           "WITH TRANSFORM ('file:///usr/bin/python3.6' , '' , '/pipelines/scripts/track_transform.py') " +\
+           "INTO PROCEDURE `load_tracks` " +\
+           "FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\' " +\
+           "LINES TERMINATED BY '\n' STARTING BY ''; "
+
 
     def reset_pipeline(self, pipeline_name):
         logging.debug(f'Reset pipeline {pipeline_name}')
