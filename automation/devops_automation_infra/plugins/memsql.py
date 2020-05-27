@@ -15,6 +15,12 @@ class Connection(object):
     def __init__(self, memsql_connection):
         self.connection = memsql_connection
 
+    def upsert(self, query):
+        with closing(self.connection.cursor()) as cursor:
+            res = cursor.execute(query)
+        self.connection.commit()
+        return res
+
     def fetchall(self, query):
         with closing(self.connection.cursor()) as c:
             c.execute(query)
@@ -141,6 +147,9 @@ class Memsql(object):
     @property
     def tunnel(self):
         return self._host.TunnelManager.get_or_create(self.DNS_NAME, self.DNS_NAME, self.PORT)
+
+    def upsert(self, query):
+        return self.connection.upsert(query)
 
     def fetch_all(self, query):
         return self.connection.fetchall(query)
