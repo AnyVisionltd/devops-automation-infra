@@ -43,7 +43,7 @@ class KafkaServer(rpyc.Service):
         return topic_partition
 
 
-def run_kafka_rpyc_server(port=18861, protocol_config={'allow_public_attrs': True}):
+def run_kafka_rpyc_server(port=18861, protocol_config={'allow_public_attrs': True, 'allow_pickle' : True}):
     ThreadedServer(
         KafkaServer,
         port=port,

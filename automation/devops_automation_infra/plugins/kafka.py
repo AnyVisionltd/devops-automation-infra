@@ -24,13 +24,19 @@ class Kafka(object):
         if self._rpyc is not None:
             return self._rpyc
         logging.debug(f"starting kafka rpyc server on {self._host.ip}")
-        self._rpyc = self._host.SSH.run_background_snippet(rpyc_kafka_server.run_kafka_rpyc_server)
+        self._rpyc = self._host.SSH.run_background_snippet(rpyc_kafka_server.run_kafka_rpyc_server, port=Kafka.RPYC_PORT)
         waiter.wait_for_predicate_nothrow(lambda: self._rpyc.running(), timeout=5)
+        logging.info("Waiting for rpyc to listen")
+        cmd = f"ss -lptn 'sport = :{Kafka.RPYC_PORT}' | tail -n +2"
+        waiter.wait_for_predicate_nothrow(lambda: self._host.SSH.execute(cmd) != "", timeout=10)
+        logging.info("RPYC listening and active")
+
 
     def _create_connection(self):
         tunnel = self._host.TunnelManager.get_or_create('kafka', self._host.ip, Kafka.RPYC_PORT)
         return waiter.wait_for_predicate_nothrow(
-            lambda: rpyc.connect(*tunnel.host_port, config={'allow_all_attrs': True, 'sync_request_timeout': 120}),
+            lambda: rpyc.connect(*tunnel.host_port, config={'allow_all_attrs': True, 'sync_request_timeout': None,
+                                                            'allow_pickle' : True}),
             timeout=10)
 
     def create_client(self):
