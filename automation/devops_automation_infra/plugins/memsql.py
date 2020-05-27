@@ -59,18 +59,43 @@ class Connection(object):
     def _start_pipeline_cmd(pipline):
         return f"start pipeline {pipline};"
 
+    @staticmethod
+    def _drop_pipeline_cmd(pipline):
+        return f"drop pipeline {pipline};"
+
+    @staticmethod
+    def _get_pipeline_partitions_cmd(pipeline):
+        return f"select SOURCE_PARTITION_ID from information_schema.pipelines_cursors WHERE PIPELINE_NAME=\"{pipeline}\"";
+
+    def get_pipeline_partitions(self, pipeline):
+        query = Connection._get_pipeline_partitions_cmd(pipeline)
+        result = self.fetchall(query)
+        return [partition['SOURCE_PARTITION_ID'] for partition in result]
+
+    def delete_pipeline_partitions(self, pipeline, *partitions):
+        partitions = partitions or self.get_pipeline_partitions(pipeline)
+        if not partitions:
+            return
+        queries = [f"ALTER PIPELINE {pipeline} DROP PARTITION '{partition}'"
+                        for partition in partitions]
+        joined = ";".join(queries)
+        self.execute(joined)
+
     def reset_pipeline(self, pipeline_name):
         logging.debug(f'Reset pipeline {pipeline_name}')
-        cmd = Connection._stop_pipeline_cmd(pipeline_name) + Connection._reset_pipeline_cmd(pipeline_name) + Connection._start_pipeline_cmd(pipeline_name)
+
         try:
-            self.connection.query(cmd)
+            self.execute(Connection._stop_pipeline_cmd(pipeline_name))
         except pymysql.err.InternalError as e:
+            logging.debug('pipeline might be stopped in this case just continue')
             err_code = e.args[0]
-            # This is pipeline already stopped error
-            if err_code == 1939:
-                cmd = Connection._reset_pipeline(pipeline_name) + Connection._start_pipeline_cmd(pipeline_name)
-                self.connection.query(cmd)
-        logging.debug(f'Done Reset pipeline {pipeline_name}')
+            PIPELINE_ALREADY_STOPPED = 1939
+            if err_code != PIPELINE_ALREADY_STOPPED:
+                raise
+
+        self.execute(Connection._reset_pipeline_cmd(pipeline_name))
+        self.delete_pipeline_partitions(pipeline_name)
+        self.execute(Connection._start_pipeline_cmd(pipeline_name))
 
     def close(self):
         self.connection.close()
