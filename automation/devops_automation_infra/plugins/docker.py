@@ -49,5 +49,12 @@ class Docker(object):
         cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._container_ip_address_cmd()} {{}}"
         return  self._ssh_direct.execute(cmd).strip()
 
+    def wait_container_down(self, service_name, timeout_command=100):
+        cmd = f'{self._docker_bin} wait {service_name}'
+        try:
+            self._ssh_direct.execute(cmd, timeout=timeout_command)
+            return True
+        except SSHCalledProcessError:
+            return False
 
 plugins.register("Docker", Docker)
