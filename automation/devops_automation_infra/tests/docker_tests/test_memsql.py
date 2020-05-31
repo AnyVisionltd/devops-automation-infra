@@ -8,4 +8,7 @@ from devops_automation_infra.plugins.memsql import Memsql
 def test_basic(base_config):
     memsql = base_config.hosts.host.Memsql
     memsql.verify_functionality()
+    logging.info("functioning. resetting state..")
+    memsql.reset_state()
+    memsql.verify_functionality()
     logging.info("<<<<<<<MEMSQL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>.")
