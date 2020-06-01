@@ -13,6 +13,8 @@ class Seaweed(object):
     def __init__(self, host):
         self._host = host
         self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-s3.default.svc.cluster.local'
+        self.filer_host = 'seaweedfs-filer-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-filer.default.svc.cluster.local'
+        self.filer_port = 8888
         self.PORT = 8333
         self._client = None
         self._resource = None
@@ -155,6 +157,9 @@ class Seaweed(object):
         assert bucket_files == ['temp/test.tmp'], f'bucket files: {bucket_files}'
         self.delete_bucket("test_bucket")
         logging.info(f"<<<<<<<<<<<<<SEAWEED PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
+
+    def http_direct_path(self, stream_s3_path):
+        return os.path.join(f"http://{self.filer_host}:{self.filer_port}/buckets", stream_s3_path.replace('s3:///', ''))
 
 
 plugins.register('Seaweed', Seaweed)
