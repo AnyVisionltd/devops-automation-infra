@@ -13,7 +13,7 @@ def test_consul(base_config):
     host = base_config.hosts.host
     consul_pg = base_config.hosts.host.Consul
     host.Docker.run_container_by_service("_consul")
-    consul_pg.ping()
+    waiter.wait_for_predicate_nothrow(consul_pg.ping)
     consul_pg.verify_functionality()
     logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
     logging.info(f"cleaning and restarting container..")
