@@ -36,7 +36,7 @@ class Kafka(object):
 
     def get_consumer(self, *topics, **kwargs):
         options = self._add_default_options(kwargs)
-        return self.rpyc.root.get_consumer(*topics, **options)
+        return waiter.wait_for_predicate_nothrow(lambda: self.rpyc.root.get_consumer(*topics, **options))
 
     def get_producer(self, **kwargs):
         options = self._add_default_options(kwargs)
