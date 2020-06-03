@@ -7,6 +7,8 @@ from munch import Munch
 from automation_infra.plugins import tunnel_manager
 from infra.model import plugins
 from pytest_automation_infra import helpers
+from automation_infra.utils import waiter
+from devops_automation_infra.utils import container
 
 
 class Consul(object):
@@ -113,13 +115,10 @@ class Consul(object):
 
         return transaction_arr
 
-    def reset_state(self, keys={}):
-        if len(keys) > 0:
-            logging.debug(f"reset consul state")
-            payload = self.create_kv_payload(keys)
-            self.delete_key("", recurse=True) # delete all consul keys
-            self.transaction(payload) # reset keys using transaction
-
+    def clear_and_start(self):
+        self.delete_storage_compose()
+        container.start_container_by_service(self._host, "_consul")
+        waiter.wait_nothrow(self.ping, timeout=30)
 
     def delete_storage_compose(self):
         self._host.SshDirect.execute('sudo rm /storage/consul-data/* -rf')
