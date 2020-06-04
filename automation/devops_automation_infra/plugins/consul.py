@@ -1,5 +1,5 @@
 import logging
-
+import json
 import sshtunnel
 import base64
 import consul
@@ -45,6 +45,10 @@ class Consul(object):
         return False
 
     def put_key(self, key, val):
+        if isinstance(val, dict):
+            val = json.dumps(val)
+        else:
+            val = str(val)
         res = self._consul.kv.put(key, val)
         return res
 
@@ -56,6 +60,13 @@ class Consul(object):
     def get_key(self, key):
         res = self._consul.kv.get(key)[1]['Value']
         return res
+
+    def get_value(self, key):
+        plain_value = self._consul.kv.get(key)[1]['Value'].decode()
+        try:
+            return json.loads(plain_value)
+        except Exception:
+            return plain_value
 
     def get_key_if_exists(self, key):
         value = None
@@ -129,6 +140,16 @@ class Consul(object):
         self.delete_key('test_key')
         first_service = next(iter(self.get_services()))
         self._consul.health.service(first_service)[1]
+        self.put_key('test_key_int', 2)
+        self.put_key('test_key_float', 2.5)
+        dict_value = {"a" : 1, "b": 2.4, "c": "bla"}
+        self.put_key('test_key_json', json.dumps(dict_value))
+        int_value = self.get_value("test_key_int")
+        assert int_value == 2 , "int value not in consul"
+        float_value = self.get_value("test_key_float")
+        assert float_value == 2.5 , "float value not in consul"
+        json_value = self.get_value("test_key_json")
+        assert json_value == dict_value , "dict value not in consul"
 
 
     def get_key_layered(self, service_name, key):
