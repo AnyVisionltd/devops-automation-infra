@@ -99,12 +99,11 @@ class Consul(object):
         return leader
 
     def get_all_keys(self):
-        try:
-            index, data = self._consul.kv.get("", recurse=True)
-            return dict((x['Key'], x['Value']) for x in data)
-        except Exception as e:
-            raise Exception("Error while retrieving all default keys from consul\nmessage: " + e.message)
-    
+        _, data = self._consul.kv.get("", recurse=True)
+        if data is None:
+            return None
+        return dict((x['Key'], x['Value']) for x in data)
+
     def create_kv_payload(self, keys={}):
         transaction_arr = []
 

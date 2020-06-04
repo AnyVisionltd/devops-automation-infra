@@ -24,6 +24,9 @@ def test_consul(base_config):
     start = time.time()
     waiter.wait_for_predicate_nothrow(consul_pg.ping)
     logging.info(f"waited for consul ping: {time.time() - start}")
+    logging.info("Verify no keys in cosul after clear")
+    all_values = host.Consul.get_all_keys()
+    assert all_values is None , "key in consul exists after clear"
     consul_pg.verify_functionality()
     logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
