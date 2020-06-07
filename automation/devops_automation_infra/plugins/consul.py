@@ -1,9 +1,6 @@
-import logging
 import json
-import sshtunnel
 import base64
 import consul
-from munch import Munch
 from automation_infra.plugins import tunnel_manager
 from infra.model import plugins
 from pytest_automation_infra import helpers
