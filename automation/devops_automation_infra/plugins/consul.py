@@ -1,12 +1,11 @@
-import logging
-
-import sshtunnel
+import json
 import base64
 import consul
-from munch import Munch
 from automation_infra.plugins import tunnel_manager
 from infra.model import plugins
 from pytest_automation_infra import helpers
+from automation_infra.utils import waiter
+from devops_automation_infra.utils import container
 
 
 class Consul(object):
@@ -43,6 +42,10 @@ class Consul(object):
         return False
 
     def put_key(self, key, val):
+        if isinstance(val, dict):
+            val = json.dumps(val)
+        else:
+            val = str(val)
         res = self._consul.kv.put(key, val)
         return res
 
@@ -54,6 +57,13 @@ class Consul(object):
     def get_key(self, key):
         res = self._consul.kv.get(key)[1]['Value']
         return res
+
+    def get_value(self, key):
+        plain_value = self._consul.kv.get(key)[1]['Value'].decode()
+        try:
+            return json.loads(plain_value)
+        except Exception:
+            return plain_value
 
     def get_key_if_exists(self, key):
         value = None
@@ -89,12 +99,11 @@ class Consul(object):
         return leader
 
     def get_all_keys(self):
-        try:
-            index, data = self._consul.kv.get("", recurse=True)
-            return dict((x['Key'], x['Value']) for x in data)
-        except Exception as e:
-            raise Exception("Error while retrieving all default keys from consul\nmessage: " + e.message)
-    
+        _, data = self._consul.kv.get("", recurse=True)
+        if data is None:
+            return None
+        return dict((x['Key'], x['Value']) for x in data)
+
     def create_kv_payload(self, keys={}):
         transaction_arr = []
 
@@ -113,13 +122,10 @@ class Consul(object):
 
         return transaction_arr
 
-    def reset_state(self, keys={}):
-        if len(keys) > 0:
-            logging.debug(f"reset consul state")
-            payload = self.create_kv_payload(keys)
-            self.delete_key("", recurse=True) # delete all consul keys
-            self.transaction(payload) # reset keys using transaction
-
+    def clear_and_start(self):
+        self.delete_storage_compose()
+        container.start_container_by_service(self._host, "_consul")
+        waiter.wait_nothrow(self.ping, timeout=30)
 
     def delete_storage_compose(self):
         self._host.SshDirect.execute('sudo rm /storage/consul-data/* -rf')
@@ -130,6 +136,16 @@ class Consul(object):
         self.delete_key('test_key')
         first_service = next(iter(self.get_services()))
         self._consul.health.service(first_service)[1]
+        self.put_key('test_key_int', 2)
+        self.put_key('test_key_float', 2.5)
+        dict_value = {"a" : 1, "b": 2.4, "c": "bla"}
+        self.put_key('test_key_json', json.dumps(dict_value))
+        int_value = self.get_value("test_key_int")
+        assert int_value == 2 , "int value not in consul"
+        float_value = self.get_value("test_key_float")
+        assert float_value == 2.5 , "float value not in consul"
+        json_value = self.get_value("test_key_json")
+        assert json_value == dict_value , "dict value not in consul"
 
 
     def get_key_layered(self, service_name, key):

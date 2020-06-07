@@ -18,13 +18,15 @@ def test_consul(base_config):
     logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
     logging.info(f"cleaning and restarting container..")
     host.Docker.kill_container_by_service("_consul")
-    host.Consul.delete_storage_compose()
     with pytest.raises(Exception):
         consul_pg.ping()
-    host.Docker.run_container_by_service("_consul")
+    host.Consul.clear_and_start()
     start = time.time()
     waiter.wait_for_predicate_nothrow(consul_pg.ping)
     logging.info(f"waited for consul ping: {time.time() - start}")
+    logging.info("Verify no keys in cosul after clear")
+    all_values = host.Consul.get_all_keys()
+    assert all_values is None , "key in consul exists after clear"
     consul_pg.verify_functionality()
     logging.info(f"<<<<<<<<<<<<<CONSUL PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
