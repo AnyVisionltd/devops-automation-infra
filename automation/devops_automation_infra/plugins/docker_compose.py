@@ -26,7 +26,7 @@ class DockerCompose(object):
 
     def compose_pull(self, compose_file_path):
         logging.debug(f"pulling docker images from compose {compose_file_path}")
-        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} pull', timeout=60*60)
+        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} pull -q', timeout=60*60)
 
     def compose_up(self, compose_file_path, *services):
         services_cmd = " ".join(services)
