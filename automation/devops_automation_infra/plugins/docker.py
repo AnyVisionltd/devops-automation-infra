@@ -91,5 +91,8 @@ class Docker(object):
         cmd = f"{self._docker_bin} run {docker_args} --network {network} {image_name}"
         self._ssh_direct.execute(cmd, timeout=10000)
 
+    def clear_logs(self):
+        self._ssh_direct.execute("sudo truncate -s 0 /var/lib/docker/containers/*/*-json.log")
+
 
 plugins.register("Docker", Docker)
