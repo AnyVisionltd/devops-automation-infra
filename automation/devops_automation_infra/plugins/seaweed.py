@@ -140,7 +140,25 @@ class Seaweed(object):
                     self.delete_bucket(bucket.name)
 
     def clear_buckets(self):
-        weed_delete_cmd = """echo 'collection.list' |  weed shell 2>/dev/null | grep collection: | awk -F':'  '{cmd="echo collection.delete " $2 "| weed shell"; print cmd; system(cmd)}'"""
+        weed_shell = "weed shell -filer seaweedfs-filer:8888"
+
+        def weed_cmd(cmd):
+            return " | ".join([f"echo {cmd}", weed_shell])
+
+        weed_delete_cmd = " | ".join([
+            weed_cmd("bucket.list"),
+            "grep -Eo '\\S+$'",
+            "sed 's|^|bucket.delete -name |'",
+            "tr '\\n' ';'",
+            weed_shell
+        ])
+
+        weed_delete_cmd = "; ".join([
+            weed_cmd("lock"),
+            weed_delete_cmd,
+            weed_cmd("unlock")
+        ])
+
         self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
 
     def verify_functionality(self):
