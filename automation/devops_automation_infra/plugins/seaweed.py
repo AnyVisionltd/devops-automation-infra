@@ -173,7 +173,10 @@ class Seaweed(object):
         self.upload_fileobj(f, "test_bucket", "temp/test.tmp")
         bucket_files = self.get_bucket_files('test_bucket')
         assert bucket_files == ['temp/test.tmp'], f'bucket files: {bucket_files}'
-        self.delete_bucket("test_bucket")
+
+        self.clear_buckets()
+        assert not self.file_exists('test_bucket', 'temp/test.tmp'), "buckets not cleared properly"
+
         logging.info(f"<<<<<<<<<<<<<SEAWEED PLUGIN FUNCTIONING PROPERLY>>>>>>>>>>>>>")
 
     def http_direct_path(self, stream_s3_path):
