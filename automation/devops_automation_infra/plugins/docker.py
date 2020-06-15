@@ -43,8 +43,8 @@ class Docker(object):
         self._ssh_direct.execute(cmd)
 
     def run_cmd_in_service(self, service_name, cmd):
-        cmd_escaped = cmd.replace('"', '\\"')
-        cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._docker_bin} exec {{}} sh -c \"{cmd_escaped}\""
+        cmd_escaped = cmd.replace("'", "\\'")
+        cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._docker_bin} exec {{}} sh -c $'{cmd_escaped}'"
         return self._ssh_direct.execute(cmd).strip()
 
     def service_ip_address(self, service_name):
