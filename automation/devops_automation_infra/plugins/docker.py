@@ -1,5 +1,7 @@
 import logging
+from distutils.util import strtobool
 
+from automation_infra.utils.waiter import wait_for_predicate_nothrow
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
@@ -61,7 +63,8 @@ class Docker(object):
                can cause error if we have 2 containers that pass the regex and have different networks
         """
         return self._ssh_direct.execute(
-            f'{self._docker_bin} ps -a --format "{{{{.Networks}}}}" --filter Name=".*{name_regex}.*"').strip().split()[0]
+            f'{self._docker_bin} ps -a --format "{{{{.Networks}}}}" --filter Name=".*{name_regex}.*"').strip().split()[
+            0]
 
     def _first_image_by_name(self, name_regex):
         container_name = self.container_by_name(name_regex)
@@ -76,7 +79,8 @@ class Docker(object):
         cmd = f"{self._docker_bin} rm -f {' '.join(container_names)}"
         self._ssh_direct.execute(cmd, timeout=100)
 
-    def run_container_by_service_with_env(self, service_name, envs={},remove_container_after_execute=False, is_detach_mode=True, **kwargs):
+    def run_container_by_service_with_env(self, service_name, envs={}, remove_container_after_execute=False,
+                                          is_detach_mode=True, **kwargs):
         docker_args = ""
         for setting, value in kwargs.items():
             docker_args += f' {setting} {value} '
@@ -85,11 +89,38 @@ class Docker(object):
         if remove_container_after_execute:
             docker_args += " --rm "
         network = self._first_network_by_name(service_name)
-        image_name=self._first_image_by_name(service_name)
+        image_name = self._first_image_by_name(service_name)
         if is_detach_mode:
             docker_args += ' -d '
         cmd = f"{self._docker_bin} run {docker_args} --network {network} {image_name}"
         self._ssh_direct.execute(cmd, timeout=10000)
+
+    def stop_all_containers(self):
+        cmd = f"{self._docker_bin} stop $({self._docker_bin} ps -a -q)"
+        self._ssh_direct.execute(cmd, timeout=100)
+
+    def number_of_running_containers(self):
+        cmd = f"{self._docker_bin} ps | wc -l"
+        result = self._ssh_direct.execute(cmd, timeout=100)
+        return 0 if result == 1 else result - 1
+
+    def stop_container(self, name_regex):
+        service_name = self.container_by_name(name_regex)
+        cmd = f"{self._docker_bin} stop {service_name}"
+        self._ssh_direct.execute(cmd, timeout=100)
+
+    def start_container(self, name_regex):
+        service_name = self.container_by_name(name_regex)
+        cmd = f"{self._docker_bin} start {service_name}"
+        self._ssh_direct.execute(cmd, timeout=100)
+
+    def is_container_up(self, name_regex):
+        service_name = self.container_by_name(name_regex)
+        cmd = f"{self._docker_bin} inspect -f '{{{{.State.Running}}}}' {service_name}"
+        return self._ssh_direct.execute(cmd, timeout=100).strip() == 'true'
+
+    def wait_container_up(self, name_regex, timeout=60, interval=1):
+        wait_for_predicate_nothrow(lambda: self.is_container_up(name_regex), timeout=timeout, interval=interval)
 
 
 plugins.register("Docker", Docker)
