@@ -72,7 +72,7 @@ pipeline {
                         script {
                             env.vminfo = sshCommand (
                                 remote: remote,
-                                command: '/home/user/automation-infra/hypervisor_cli.py --allocator=localhost:8080 create --image=ubuntu-compose_v2 --cpu=10 --ram=20 --size=150 --gpus=1 --networks bridge'
+                                command: '/home/user/automation-infra/hypervisor_cli.py --allocator=localhost:8080 create --image=ubuntu-compose_v2 --cpu=6 --ram=10 --size=150 --gpus=1 --networks bridge'
                             )
                             env.vmip = sh (
                                 script: "echo '${env.vminfo}' | jq  .info.net_ifaces[0].ip",
