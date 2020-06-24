@@ -36,17 +36,6 @@ pipeline {
                 ]
             }
         }
-        stage ('Clone the core-product repo') {
-            steps {
-                checkout changelog: false, poll: false, scm: [
-                    $class: 'GitSCM',
-                    branches: [[name: params.CORE_PRODUCT_BRANCH ]],
-                    extensions: [[$class: 'RelativeTargetDirectory',
-                       relativeTargetDir: 'core_product/']],
-                    userRemoteConfigs: [[credentialsId: 'av-jenkins-reader', url: "https://github.com/AnyVisionltd/core-product.git"]]
-                ]
-            }
-        }
         stage ('Set Remote connection to KVM machine') {
             steps {
                 script {
@@ -88,28 +77,10 @@ pipeline {
                         )
                     }
                 }
-                stage('Send core-product to VM and run docker-compose up') {
-                    steps {
-                        script {
-                            timeout(10) {
-                                waitUntil {
-                                    def resp = sh script: "nc -w 1 -z ${env.vmip} 22", returnStatus: true
-                                    return resp == 0
-                                }
-                            }
-                        }
-                        sh """
-                           ssh-keygen -R ${env.vmip} || true
-                           ssh-keyscan -H ${env.vmip} >> ~/.ssh/known_hosts
-                           sshpass -p root scp -r core_product root@${env.vmip}:
-                           sshpass -p root ssh root@${env.vmip} 'docker-compose -f ./core_product/docker-compose/docker-compose-core-gpu.yml up -d'
-                        """
-                    }
-                }
                 stage('Run integration tests') {
                     steps {
                         sh (
-                            script: "cd ./automation_infra/ && MOUNT_PATH=${WORKSPACE} PYTHONPATH=../automation/:. ./containerize.sh 'cat ${WORKSPACE}/hardware.yaml && PYTHONPATH=../automation/:. python3 -m pytest -p pytest_automation_infra ${WORKSPACE}/automation/devops_automation_infra/tests/docker_tests/ --hardware ${WORKSPACE}/hardware.yaml'"
+                            script: "cd ./automation_infra/ && MOUNT_PATH=${WORKSPACE} PYTHONPATH=../automation/:. ./containerize.sh 'cat ${WORKSPACE}/hardware.yaml && PYTHONPATH=../automation/:. python3 -m pytest -p pytest_automation_infra -p devops_product_manager ${WORKSPACE}/automation/devops_automation_infra/tests/docker_tests/ --hardware ${WORKSPACE}/hardware.yaml'"
                         )
                     }
                 }

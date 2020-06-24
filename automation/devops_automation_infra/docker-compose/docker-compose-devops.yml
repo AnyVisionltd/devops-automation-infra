@@ -1,0 +1,311 @@
+networks:
+  bridge:
+services:
+  consul:
+    environment:
+    - CMD=agent -server -bootstrap -ui
+    - CONSUL_SERVER=127.0.0.1
+    - CONSUL_BIND_INTERFACE=eth0
+    - CONSUL_CLIENT_ADDRESS=0.0.0.0
+    - JOB_NAME=consul
+    - DATACENTER=dc1
+    - SITE_NAME=local
+    - RUN_AS_USER=root
+    image: gcr.io/anyvision-training/consul:18.12
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - consul.tls.ai
+    ports:
+    - 8500:8500
+    restart: always
+    volumes:
+    - /storage/consul-data:/consul/data
+    - /etc/hostname:/etc/host_hostname:ro
+  consul-agent:
+    environment:
+    - CONSUL_SERVER=consul.tls.ai
+    - CONSUL_BIND_INTERFACE=eth0
+    - CONSUL_CLIENT_ADDRESS=0.0.0.0
+    - JOB_NAME=consul-agent
+    - DATACENTER=dc1
+    - SITE_NAME=local
+    - RUN_AS_USER=root
+    image: gcr.io/anyvision-training/consul:18.12
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - consul-agent.tls.ai
+    ports:
+    - 8501:8500
+    restart: always
+    volumes:
+    - /etc/hostname:/etc/host_hostname:ro
+  docker-hoster:
+    environment:
+    - host_aliases=pipeng.tls.ai,pipeng-localnode.tls.ai
+    - dockers_whitelist=consul,camera-service
+    image: gcr.io/anyvision-training/docker-hoster:development
+    logging:
+      options:
+        max-size: 1g
+    network_mode: host
+    restart: always
+    volumes:
+    - /var/run/docker.sock:/tmp/docker.sock
+    - /etc/hosts:/tmp/hosts
+    - /etc/resolv.conf:/etc/resolv.conf
+  kafka:
+    depends_on:
+    - zookeeper
+    environment:
+    - CONSUL_SERVER=consul-agent.tls.ai
+    - ZOOKEEPER_SERVER=zookeeper.tls.ai
+    - ZOOKEEPER_PORT=2181
+    - KAFKA_PORT=9092
+    - KAFKA_BROKER_ID=1
+    - KAFKA_ADVERTISED_HOST_NAME=kafka.tls.ai
+    - KAFKA_ZOOKEEPER_CONNECT=zookeeper.tls.ai:2181
+    - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+    - KAFKA_ADVERTISED_LISTENERS=INSIDE://kafka.tls.ai:9092
+    - KAFKA_LISTENERS=INSIDE://kafka.tls.ai:9092
+    - KAFKA_INTER_BROKER_LISTENER_NAME=INSIDE
+    - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
+    - KAFKA_LOG_RETENTION_HOURS=48
+    - KAFKA_LOG_RETENTION_BYTES=2147483648
+    - KAFKA_LOG_ROLL_HOURS=24
+    - KAFKA_MESSAGE_MAX_BYTES=2097152
+    - KAFKA_NUM_NETWORK_THREADS=6
+    - KAFKA_NUM_REPLICA_FETCHERS=2
+    - KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS=12
+    - KAFKA_OFFSETS_TOPIC_SEGMENT_BYTES=26214400
+    - KAFKA_HEAP_OPTS=-Xmx2G -Xms2G
+    image: gcr.io/anyvision-training/kafka:20.02
+    networks:
+      bridge:
+        aliases:
+        - kafka.tls.ai
+    ports:
+    - 9092:9092
+    restart: always
+    volumes:
+    - /storage/kafka:/kafka
+    - /etc/hostname:/etc/host_hostname:ro
+    - /storage/logs/kafka:/logs
+  kafka-hq:
+    environment:
+      KAFKAHQ_CONFIGURATION: "kafkahq:\n  topic-data:\n    sort: NEWEST\n    size:\
+        \ 50\n    poll-timeout: 2500\n  connections:\n    docker-kafka-server:\n \
+        \     properties:\n        bootstrap.servers: \"kafka.tls.ai:9092\"\n"
+    hostname: kafka-hq
+    image: gcr.io/anyvision-training/kafkahq:0.12.0-0
+    networks:
+      bridge:
+        aliases:
+        - kafka-hq.tls.ai
+    ports:
+    - 8765:8080
+  logrotate:
+    environment:
+    - LOGS_DIRECTORIES=/storage/logs
+    - LOGROTATE_INTERVAL=hourly
+    - LOGROTATE_COPIES=10
+    - LOGROTATE_SIZE=100M
+    - LOGROTATE_STATUSFILE=/logrotate-status/logrotate.status
+    - LOGROTATE_COMPRESSION=compress
+    - LOGROTATE_CRONSCHEDULE=* * * * * *
+    - LOGROTATE_AUTOUPDATE=false
+    image: gcr.io/anyvision-training/logrotate:19.09
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - logrotate.tls.ai
+    restart: on-failure
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - /storage/logs:/storage/logs
+    - $PWD/logs:/logs
+  memsql:
+    environment:
+    - LICENSE_KEY=BDk3ZmFhNGU3YmJmOTQ5N2I5N2RmY2E4ZWEzZTAxYjVlAAAAAAAAAAAAAAIAAAAAAAQwNQIZAJGgtcrXzs18QzlKPsIo5SNnwVxqxH6gEwIYbWq/m+E3/flYcFfIm3ERvsxjtlbaz7O5AA==
+    - MEMSQL_NODE_ROLE=AIO
+    - MEMSQL_PASSWORD=password
+    - AGG_MEMORY_LIMIT=4
+    - LEAF_MEMORY_LIMIT=124
+    image: gcr.io/anyvision-training/memsql:20.04
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - memsql.tls.ai
+    ports:
+    - 3306:3306
+    restart: always
+    volumes:
+    - /ssd/memsql:/var/lib/memsql
+    - /storage/backup_memsql:/backup
+    - ./memsql/pipelines:/pipelines
+    - /storage/logs/memsql:/logs
+  nginx:
+    environment:
+    - limit_rate_speed=0
+    - aws_host="seaweedfs-s3-localnode.tls.ai:8333"
+    - error_log_level=info
+    - access_log=on
+    - rewrite_log=on
+    image: gcr.io/anyvision-training/nginx:19.06
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - nginx-localnode.tls.ai
+    ports:
+    - 1935:1935
+    - 443:443
+    restart: always
+    volumes:
+    - /storage:/opt/nginx/html:ro
+    - /storage/nginx-logs:/var/log/nginx
+    - /usr/local/share/ca-certificates:/usr/local/share/ca-certificates
+    - /etc/localtime:/etc/localtime:ro
+  postgres:
+    environment:
+    - PG_MAX_MEMORY_GB=8
+    - PG_MAX_CPU=8
+    - PG_LOG_MIN_DURATION_STATEMENT=250
+    - POSTGRES_PASSWORD=password
+    image: gcr.io/anyvision-training/postgres:20.02
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - postgres.tls.ai
+    ports:
+    - 5432:5432
+    restart: always
+    volumes:
+    - /ssd/postgres:/var/lib/postgresql/data
+    - /storage/backup_postgres:/backup
+    - /storage/logs/postgres:/logs
+  redis:
+    environment:
+    - ALLOW_EMPTY_PASSWORD=yes
+    image: bitnami/redis:5.0.7
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - redis.tls.ai
+    restart: always
+    volumes:
+    - ./redis/redis.conf:/opt/bitnami/redis/etc/redis.conf
+  seaweedfs-filer:
+    command: -logdir=/logs -v=1 filer -master=seaweedfs-master-localnode.tls.ai:9333
+      -ip=seaweedfs-filer-localnode.tls.ai
+    depends_on:
+    - seaweedfs-master
+    environment:
+    - WEED_FILER_OPTIONS_RECURSIVE_DELETE=true
+    - WEED_LEVELDB2_ENABLED=true
+    - WEED_LEVELDB2_DIR=/data/filerldb2
+    - WEED_FILER_BUCKETS_FOLDER=/buckets
+    image: gcr.io/anyvision-training/seaweedfs:1.77
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - seaweedfs-filer-localnode.tls.ai
+    ports:
+    - 8888:8888
+    restart: always
+    volumes:
+    - /ssd/seaweed-filer/filerldb2:/data/filerldb2
+    - /storage/logs/seaweedfs/filer:/logs
+  seaweedfs-master:
+    command: -v=1 master -ip=seaweedfs-master-localnode.tls.ai -mdir=/data
+    image: gcr.io/anyvision-training/seaweedfs:1.77
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - seaweedfs-master-localnode.tls.ai
+    restart: always
+    volumes:
+    - /ssd/seaweed-master:/data
+    - /storage/logs/seaweedfs/master:/logs
+  seaweedfs-s3:
+    command: -logdir=/logs -v=1 s3 -filer=seaweedfs-filer-localnode.tls.ai:8888 -port=8333
+    depends_on:
+    - seaweedfs-master
+    - seaweedfs-volume
+    - seaweedfs-filer
+    image: gcr.io/anyvision-training/seaweedfs:1.77
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - seaweedfs-s3-localnode.tls.ai
+    ports:
+    - 8333:8333
+    restart: always
+    volumes:
+    - /storage/logs/seaweedfs/s3:/logs
+  seaweedfs-volume:
+    command: -logdir=/logs -v=1 volume -max=10000 -ip=seaweedfs-volume-localnode.tls.ai
+      -mserver=seaweedfs-master-localnode.tls.ai:9333 -port=8080 -dir=/data -compactionMBps=40
+    depends_on:
+    - seaweedfs-master
+    image: gcr.io/anyvision-training/seaweedfs:1.77
+    logging:
+      options:
+        max-size: 1g
+    networks:
+      bridge:
+        aliases:
+        - seaweedfs-volume-localnode.tls.ai
+    restart: always
+    volumes:
+    - /storage/seaweed:/data
+    - /storage/logs/seaweedfs/volume:/logs
+  zookeeper:
+    environment:
+    - ZOO_MY_ID=1
+    - ZOO_SERVERS=server.1=zookeeper.tls.ai:2888:3888;2181
+    hostname: zookeeper
+    image: gcr.io/anyvision-training/zookeeper:20.02
+    networks:
+      bridge:
+        aliases:
+        - zookeeper.tls.ai
+    restart: always
+    volumes:
+    - /ssd/zookeeper/conf/:/conf
+    - /ssd/zookeeper/data/:/data
+    - /ssd/zookeeper/datalog/:/datalog
+    - /storage/logs/zookeeper:/logs
+version: '3.3'
+volumes:
+  redis_db_data: null
