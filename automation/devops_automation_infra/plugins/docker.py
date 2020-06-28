@@ -59,6 +59,11 @@ class Docker(object):
         cmd = f'{self._docker_bin} wait {container_name}'
         self._ssh_direct.execute(cmd, timeout=timeout_command)
 
+    def copy_file_to_container(self, service_name, file_path, docker_dest_path):
+        container_name = self.container_by_name(service_name)
+        cmd = f'{self._docker_bin} cp {file_path} {container_name}:{docker_dest_path}'
+        self._ssh_direct.execute(cmd)
+
     def _first_network_by_name(self, name_regex):
         """
                can cause error if we have 2 containers that pass the regex and have different networks
