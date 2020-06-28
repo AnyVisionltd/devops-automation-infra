@@ -4,11 +4,10 @@ import psycopg2
 import psycopg2.extras
 
 from infra.model import plugins
-from automation_infra.plugins.base_plugin import TunneledPlugin
 from pytest_automation_infra.helpers import hardware_config
 
 
-class Postgresql(TunneledPlugin):
+class Postgresql(object):
     def __init__(self,host):
         super().__init__(host)
         self.DNS_NAME = 'postgres.tls.ai'
@@ -22,9 +21,9 @@ class Postgresql(TunneledPlugin):
         return self._connection
 
     def _get_connection(self):
-        self.start_tunnel(self.DNS_NAME, self.PORT)
-        connection = psycopg2.connect(host='localhost',
-                                     port=self.local_bind_port,
+        tunnel = self._host.TunnelManager.get_or_create('postgres', self.DNS_NAME, self.PORT)
+        connection = psycopg2.connect(host=tunnel.host_port[0],
+                                     port=tunnel.host_port[1],
                                      user='anv_admin',
                                      password='password',
                                      database = 'anv_db')
