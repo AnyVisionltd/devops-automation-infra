@@ -8,7 +8,7 @@ from pytest_automation_infra import helpers
 from devops_automation_infra.utils import rpyc_kafka_server
 from devops_automation_infra.utils import kafka_client
 from devops_automation_infra.utils import container
-
+import threading
 
 class Kafka(object):
     RPYC_PORT = 18861
@@ -19,12 +19,14 @@ class Kafka(object):
                 else 'kafka-cluster-kafka-brokers.default.svc.cluster.local'
         self.PORT = '9092'
         self._rpyc = None
+        self._init_lock = threading.Lock()
 
     def _start_server(self):
-        if self._rpyc is not None:
-            return self._rpyc
-        logging.debug(f"starting kafka rpyc server on {self._host.ip}")
-        self._rpyc = self._host.SSH.run_background_snippet(rpyc_kafka_server.run_kafka_rpyc_server)
+        with self._init_lock:
+            if self._rpyc is not None:
+                return self._rpyc
+            logging.debug(f"starting kafka rpyc server on {self._host.ip}")
+            self._rpyc = self._host.SSH.run_background_snippet(rpyc_kafka_server.run_kafka_rpyc_server)
         waiter.wait_for_predicate_nothrow(lambda: self._rpyc.running(), timeout=5)
 
     def _create_connection(self):
