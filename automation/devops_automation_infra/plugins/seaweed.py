@@ -6,6 +6,7 @@ from pytest_automation_infra import helpers
 from botocore.exceptions import ClientError
 import boto3
 import os
+import io
 
 from automation_infra.plugins.resource_manager import ResourceManager
 
@@ -106,6 +107,22 @@ class Seaweed(ResourceManager):
 
     def http_direct_path(self, stream_s3_path):
         return os.path.join(f"http://{self.filer_host}:{self.filer_port}/buckets", stream_s3_path.replace('s3:///', ''))
+
+
+    def deploy_resource_to_s3(self, resource_path, s3_path):
+        bucket = "automation_infra"
+        file_bytes = self._host.ResourceManager.get_raw_resource(resource_path)
+        file_obj = io.BytesIO(file_bytes)
+        self.upload_fileobj(file_obj, bucket, s3_path)
+        return f'{bucket}/{s3_path}'
+
+
+    def deploy_multiple_resources_to_s3(self, aws_file_list, aws_folder, s3_folder):
+        resources_s3_list = []
+        for resource in aws_file_list:
+            resources_s3_list.append(
+            self.deploy_resource_to_s3(os.path.join(aws_folder, resource), os.path.join(s3_folder, resource)))
+        return resources_s3_list
 
 
 plugins.register('Seaweed', Seaweed)
