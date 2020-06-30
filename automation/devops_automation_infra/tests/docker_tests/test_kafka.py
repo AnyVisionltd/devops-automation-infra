@@ -4,6 +4,7 @@ from automation_infra.plugins.tunnel_manager import TunnelManager
 from devops_automation_infra.plugins import kafka as libkafka
 from pytest_automation_infra.helpers import hardware_config
 from automation_infra.utils import waiter
+from automation_infra.utils import concurrently
 
 
 @hardware_config(hardware={"host": {}})
@@ -33,3 +34,12 @@ def test_kafka(base_config):
     client = kafka.create_client()
     client.verify_functionality()
     logging.info("original kafka functioning properly")
+
+
+@hardware_config(hardware={"host": {}})
+def test_kafka_multithreaded_usage(base_config):
+    def _kafka_minitest():
+        kafka = base_config.hosts.host.Kafka
+        client = kafka.create_client()
+        client.get_topics()
+    concurrently.run({f"{i}" : _kafka_minitest for i in range(3)})
