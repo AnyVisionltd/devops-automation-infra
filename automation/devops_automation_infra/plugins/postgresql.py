@@ -4,13 +4,13 @@ import psycopg2
 import psycopg2.extras
 
 from infra.model import plugins
-from pytest_automation_infra.helpers import hardware_config
+from pytest_automation_infra.helpers import hardware_config, is_k8s
 
 
 class Postgresql(object):
-    def __init__(self,host):
-        super().__init__(host)
-        self.DNS_NAME = 'postgres.tls.ai'
+    def __init__(self, host):
+        self._host = host
+        self.DNS_NAME = 'postgres.tls.ai' if not is_k8s(self._host.SshDirect) else 'postgres.default.svc.cluster.local'
         self.PORT = 5432
         self._connection = None
 
