@@ -60,8 +60,10 @@ class Docker(object):
         self._ssh_direct.execute(cmd, timeout=timeout_command)
 
     def copy_file_to_container(self, service_name, file_path, docker_dest_path):
+        remote_file = self._host.mktemp()
+        self._host.SshDirect.upload(file_path, remote_file)
         container_name = self.container_by_name(service_name)
-        cmd = f'{self._docker_bin} cp {file_path} {container_name}:{docker_dest_path}'
+        cmd = f'{self._docker_bin} cp {remote_file} {container_name}:{docker_dest_path}'
         self._ssh_direct.execute(cmd)
 
     def _first_network_by_name(self, name_regex):
