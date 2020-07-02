@@ -89,7 +89,7 @@ class Docker(object):
                                           is_detach_mode=True, **kwargs):
         docker_args = ""
         for setting, value in kwargs.items():
-            docker_args += f' {setting} {value} '
+            docker_args += f' --{setting} {value} '
         for setting, value in envs.items():
             docker_args += f' -e {setting}={value}'
         if remove_container_after_execute:
