@@ -6,6 +6,8 @@ from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
 
+from devops_automation_infra.utils.host import get_host_ip
+
 
 class Docker(object):
 
@@ -52,7 +54,11 @@ class Docker(object):
     def service_ip_address(self, service_name):
         cmd = self._running_container_by_name_cmd(
             service_name) + f"| xargs -I{{}} {self._container_ip_address_cmd()} {{}}"
-        return self._ssh_direct.execute(cmd).strip()
+        container_ip = self._ssh_direct.execute(cmd).strip()
+        # if a service is found but has no ip, it is assumed to be in host-mode.
+        # "container does not have its own IP-address when using host mode networking"
+        # (from https://docs.docker.com/network/host/)
+        return container_ip or get_host_ip(self._host)
 
     def wait_container_down(self, name_regex, timeout_command=100):
         container_name = self.container_by_name(name_regex)
