@@ -31,7 +31,7 @@ class DockerCompose(object):
     def compose_up(self, compose_file_path, *services):
         services_cmd = " ".join(services)
         logging.debug(f"starting compose {compose_file_path} services: ")
-        self._ssh_direct.execute(f'{COMPOSE_HTTP_TIMEOUT=120 self.compose_bin_path} -f {compose_file_path} up -d {services_cmd}', timeout=60*20)
+        self._ssh_direct.execute(f'COMPOSE_HTTP_TIMEOUT=120 {self.compose_bin_path} -f {compose_file_path} up -d {services_cmd}', timeout=60*20)
 
 
     def restart_container_by_service_name(self, compose_file_path, container):
