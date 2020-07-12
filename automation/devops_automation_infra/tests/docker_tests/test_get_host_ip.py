@@ -1,6 +1,6 @@
 import logging
 
-from utils.host import get_host_ip
+from devops_automation_infer.utils.host import get_host_ip
 from pytest_automation_infra.helpers import hardware_config
 
 
