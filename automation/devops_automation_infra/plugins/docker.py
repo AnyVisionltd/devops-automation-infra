@@ -51,6 +51,11 @@ class Docker(object):
         cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._docker_bin} exec {{}} sh -c $'{cmd_escaped}'"
         return self.try_executing_and_verbosely_log_error(cmd).strip()
 
+    def run_cmd_in_service_background(self, service_name, cmd):
+        cmd_escaped = cmd.replace("'", "\\'")
+        cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._docker_bin} exec --detach {{}} sh -c $'{cmd_escaped}'"
+        return self._ssh_direct.execute(cmd)
+
     def service_ip_address(self, service_name):
         cmd = self._running_container_by_name_cmd(
             service_name) + f"| xargs -I{{}} {self._container_ip_address_cmd()} {{}}"
