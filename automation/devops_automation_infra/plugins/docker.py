@@ -149,6 +149,11 @@ class Docker(object):
             logging.info(f"sudo ps -ef | grep docker | grep port: {self._ssh_direct.execute('sudo ps -ef | grep docker | grep port')}")
             raise
 
+    def get_container_logs(self, name_regex, since='5m'):
+        container_name = self.container_by_name(name_regex)
+        cmd = f"{self._docker_bin} logs {container_name} --since {since}"
+        return self._ssh_direct.execute(cmd)
+
 
 
 plugins.register("Docker", Docker)
