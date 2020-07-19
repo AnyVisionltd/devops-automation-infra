@@ -80,6 +80,11 @@ class Docker(object):
         cmd = f'{self._docker_bin} cp {remote_file} {container_name}:{docker_dest_path}'
         self.try_executing_and_verbosely_log_error(cmd)
 
+    def copy_from_host_to_container(self, service_name, remote_dir, container_dir):
+        container_name = self.container_by_name(service_name)
+        cmd = f'{self._docker_bin} cp -a {remote_dir} {container_name}:{container_dir}'
+        self._ssh_direct.execute(cmd)
+
     def _first_network_by_name(self, name_regex):
         """
                can cause error if we have 2 containers that pass the regex and have different networks
