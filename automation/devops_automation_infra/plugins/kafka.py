@@ -49,6 +49,7 @@ class Kafka(object):
             return self.create_client().ping()
         except:
             self.log_debug_info()
+            raise
 
     def reset_state(self):
         if not helpers.is_k8s(self._host.SshDirect):
