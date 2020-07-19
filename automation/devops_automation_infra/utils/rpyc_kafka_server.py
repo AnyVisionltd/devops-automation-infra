@@ -3,16 +3,27 @@ import rpyc
 from rpyc.utils.server import ThreadedServer
 import logging
 
+logging.basicConfig(filename='/tmp/rpyc.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s',
+                    level=logging.DEBUG)
+
+
 class KafkaServer(rpyc.Service):
+
+    def on_connect(self, conn):
+        logging.info("client connected!")
+
+    def on_disconnect(self, conn):
+        logging.info("client disconnected!")
+
     @staticmethod
     def get_admin(**kwargs):
-        logging.error("getting admin")
+        logging.info("getting admin")
         return kafka.KafkaAdminClient(**kwargs)
 
     @staticmethod
     def get_producer(**kwargs):
         """to produce: producer.send(topic, message_bytes)"""
-        logging.error("getting admin")
+        logging.info("getting admin")
         return kafka.KafkaProducer(**kwargs)
 
     @staticmethod
@@ -44,6 +55,7 @@ class KafkaServer(rpyc.Service):
 
 
 def run_kafka_rpyc_server(port=18861, protocol_config={'allow_public_attrs': True}):
+    logging.info("starting kafka server")
     ThreadedServer(
         KafkaServer,
         port=port,
