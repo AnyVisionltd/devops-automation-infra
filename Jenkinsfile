@@ -31,7 +31,7 @@ pipeline {
                     $class: 'GitSCM',
                     branches: [[name: params.AUTOMATION_INFRA_BRANCH ]],
                     extensions: [[$class: 'RelativeTargetDirectory',
-                       relativeTargetDir: 'automation_infra/']],
+                       relativeTargetDir: 'automation-infra/']],
                     userRemoteConfigs: [[credentialsId: 'av-jenkins-reader', url: "https://github.com/AnyVisionltd/automation-infra.git"]]
                 ]
             }
@@ -44,6 +44,13 @@ pipeline {
                     remote.allowAnyHosts = true
                     remote.user = "${env.KVM_MACHINE_CREDS_USR}"
                     remote.password = "${env.KVM_MACHINE_CREDS_PSW}"
+                }
+            }
+        }
+        stage('Move devops folder') {
+            steps {
+                script {
+                    sh "mkdir -p devops-automation-infra && mv -n automation devops-automation-infra"
                 }
             }
         }
@@ -67,20 +74,26 @@ pipeline {
                                 script: "echo '${env.vminfo}' | jq  .info.net_ifaces[0].ip",
                                 returnStdout: true
                             ).trim()
+                            echo "vmip: ${env.vmip}"
+                            if (env.vmip == null) {
+                                echo "vmip was null, failing.."
+                                currentBuild.result = "FAILURE"
+                                throw new Exception("wasnt able to allocate a vm: env.vminfo")
+                            }
                         }
                     }
                 }
                 stage('Create the hardware.yaml') {
                     steps {
                         sh (
-                          script: "make -f ./automation_infra/Makefile-env set-connection-file HOST_IP=${env.vmip} USERNAME=root PASS=root CONN_FILE_PATH=${WORKSPACE}/hardware.yaml && cat ${WORKSPACE}/hardware.yaml"
+                          script: "make -f ./automation-infra/Makefile-env set-connection-file HOST_IP=${env.vmip} USERNAME=root PASS=root CONN_FILE_PATH=${WORKSPACE}/hardware.yaml && cat ${WORKSPACE}/hardware.yaml"
                         )
                     }
                 }
                 stage('Run integration tests') {
                     steps {
                         sh (
-                            script: "cd ./automation_infra/ && MOUNT_PATH=${WORKSPACE} PYTHONPATH=../automation/:. ./containerize.sh 'cat ${WORKSPACE}/hardware.yaml && PYTHONPATH=../automation/:. python3 -m pytest -p pytest_automation_infra -p devops_product_manager ${WORKSPACE}/automation/devops_automation_infra/tests/docker_tests/ --hardware ${WORKSPACE}/hardware.yaml'"
+                            script: "cd ./automation-infra/ && ./run_tests.sh -p devops_product_manager ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --hardware=${WORKSPACE}/hardware.yaml"
                         )
                     }
                 }
