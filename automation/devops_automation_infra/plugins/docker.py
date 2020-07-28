@@ -7,6 +7,7 @@ from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
 
 from devops_automation_infra.utils.host import get_host_ip
+import json
 
 
 class Docker(object):
@@ -164,6 +165,10 @@ class Docker(object):
             logging.info(f"sudo netstat -ntlp | grep docker: {self._ssh_direct.execute('sudo netstat -ntlp | grep docker')}")
             logging.info(f"sudo ps -ef | grep docker | grep port: {self._ssh_direct.execute('sudo ps -ef | grep docker | grep port')}")
             raise
+
+    def inspect(self, container_id):
+        cmd = f'{self._docker_bin} inspect {container_id}'
+        return json.loads(self._ssh_direct.execute(cmd).strip())[0]
 
     def get_container_logs(self, name_regex, tail=30):
         container_name = self.container_by_name(name_regex)
