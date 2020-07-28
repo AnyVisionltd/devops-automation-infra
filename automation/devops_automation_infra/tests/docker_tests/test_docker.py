@@ -16,3 +16,5 @@ def test_docker(base_config):
     content = base_config.hosts.host.SSH.get_contents("/tmp/test_file")
     assert content == b"Sasha king"
     temp.close()
+    ids = base_config.hosts.host.Docker.container_ids_by_name("automation_proxy")
+    assert len(ids) == 1
