@@ -28,6 +28,9 @@ class Docker(object):
     def _container_by_name_cmd(self, name_regex):
         return f'{self._docker_bin} ps -a --format "{{{{.Names}}}}" --filter Name=".*{name_regex}.*"'
 
+    def _container_id_by_name_cmd(self, name_regex):
+        return f'{self._docker_bin} ps -a --format "{{{{.ID}}}}" --filter Name=".*{name_regex}.*"'
+
     def _container_ip_address_cmd(self):
         return f'{self._docker_bin} inspect -f "{{{{range .NetworkSettings.Networks}}}}{{{{.IPAddress}}}}{{{{end}}}}"'
 
@@ -101,6 +104,9 @@ class Docker(object):
 
     def container_by_name(self, name_regex):
         return self._ssh_direct.execute(self._container_by_name_cmd(name_regex)).strip().split()[0]
+
+    def container_ids_by_name(self, name_regex):
+        return self._ssh_direct.execute(self._container_id_by_name_cmd(name_regex)).strip().split('\n')
 
     def remove_containers_by_name(self, *container_names):
         cmd = f"{self._docker_bin} rm -f {' '.join(container_names)}"
