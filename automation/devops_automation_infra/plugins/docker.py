@@ -97,6 +97,11 @@ class Docker(object):
             f'{self._docker_bin} ps -a --format "{{{{.Networks}}}}" --filter Name=".*{name_regex}.*"').strip().split()[
             0]
 
+    def _aliases_by_container_name(self, container_name):
+        json_res = self._ssh_direct.execute(f'{self._docker_bin} inspect --format "{{{{json .NetworkSettings.Networks}}}}" {container_name}')
+        res = json.loads(json_res)
+        return next(iter(res.values()))["Aliases"]
+
     def _first_image_by_name(self, name_regex):
         container_name = self.container_by_name(name_regex)
         cmd = f'{self._docker_bin} inspect --format="{{{{.Config.Image}}}}" {container_name}'
@@ -117,13 +122,32 @@ class Docker(object):
                                           is_detach_mode=True, **kwargs):
         docker_args = ""
         for setting, value in kwargs.items():
-            docker_args += f' {setting} {value} '
+            docker_args += f' --{setting} {value} '
         for setting, value in envs.items():
             docker_args += f' -e {setting}={value}'
         if remove_container_after_execute:
             docker_args += " --rm "
         network = self._first_network_by_name(service_name)
         image_name = self._first_image_by_name(service_name)
+        if is_detach_mode:
+            docker_args += ' -d '
+        cmd = f"{self._docker_bin} run {docker_args} --network {network} {image_name}"
+        self.try_executing_and_verbosely_log_error(cmd, timeout=10000)
+
+    def overwrite_and_run_container_by_service_with_env(self, service_name, envs={}, is_detach_mode=True, **kwargs):
+        network = self._first_network_by_name(service_name)
+        image_name = self._first_image_by_name(service_name)
+        container_name = self.container_by_name(service_name)
+        network_alias = self._aliases_by_container_name(container_name)[0]
+
+        self.remove_containers_by_name(container_name)
+
+        docker_args = f" --name {container_name} --network-alias {network_alias}"
+
+        for setting, value in kwargs.items():
+            docker_args += f' --{setting} {value} '
+        for setting, value in envs.items():
+            docker_args += f' -e {setting}={value}'
         if is_detach_mode:
             docker_args += ' -d '
         cmd = f"{self._docker_bin} run {docker_args} --network {network} {image_name}"
