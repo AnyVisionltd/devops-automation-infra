@@ -129,15 +129,29 @@ class Memsql(object):
                                        port=port,
                                        database=database)
 
+    def direct_connection(self, ip = None, port=3306, password=None, database=None):
+        if ip is None:
+            ip = self._host.ip
+        if password is None:
+            password = self.password
+
+        return self._create_connection(host=ip, port=port,
+                                       password = password,
+                                       cursorclass=pymysql.cursors.DictCursor,
+                                       client_flag=CLIENT.MULTI_STATEMENTS,
+                                       database=database)
+
     @property
     def password(self):
-        assert helpers.is_k8s(self._host.SshDirect)
-        return self._host.SshDirect.execute(
-            "kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
+        if not helpers.is_k8s(self._host.SshDirect):
+            return 'password'
+        return self._host.SshDirect.execute("kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
 
     def _create_connection(self, **kwargs):
         password = "password" if not helpers.is_k8s(self._host.SshDirect) else self._host.SshDirect.execute("kubectl get secret --namespace default memsql-secret -o jsonpath='{.data.password}' | base64 --decode")
         memsql_kwargs = copy.copy(kwargs)
+        if memsql_kwargs.get('password', None) is None:
+            memsql_kwargs['password'] = self.password
         memsql_kwargs.setdefault('password', password)
         memsql_kwargs.setdefault('user', 'root')
         memsql_kwargs.setdefault('client_flag', CLIENT.MULTI_STATEMENTS)
