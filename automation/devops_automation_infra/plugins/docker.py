@@ -138,11 +138,15 @@ class Docker(object):
         network = self._first_network_by_name(service_name)
         image_name = self._first_image_by_name(service_name)
         container_name = self.container_by_name(service_name)
-        network_alias = self._aliases_by_container_name(container_name)[0]
+        network_aliases = self._aliases_by_container_name(container_name)
+        dns_aliases = [alias for alias in network_aliases if alias.endswith(".tls.ai")]
 
         self.remove_containers_by_name(container_name)
 
-        docker_args = f" --name {container_name} --network-alias {network_alias}"
+        docker_args = f" --name {container_name}"
+
+        if dns_aliases:
+            docker_args += f" --network-alias {dns_aliases[0]}"
 
         for setting, value in kwargs.items():
             docker_args += f' --{setting} {value} '
