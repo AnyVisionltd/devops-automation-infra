@@ -188,10 +188,10 @@ class Docker(object):
         try:
             return self._ssh_direct.execute(cmd, timeout=timeout)
         except:
-            logging.exception(f"caught exception trying to execute command: {cmd}")
-            logging.info(f"docker ps output: {self._ssh_direct.execute(f'{self._docker_bin} ps')}")
-            logging.info(f"sudo netstat -ntlp | grep docker: {self._ssh_direct.execute('sudo netstat -ntlp | grep docker')}")
-            logging.info(f"sudo ps -ef | grep docker | grep port: {self._ssh_direct.execute('sudo ps -ef | grep docker | grep port')}")
+            logging.debug(f"caught exception trying to execute command: {cmd}", exc_info=True)
+            logging.debug(f"docker ps output: {self._ssh_direct.execute(f'{self._docker_bin} ps')}")
+            logging.debug(f"sudo netstat -ntlp | grep docker: {self._ssh_direct.execute('sudo netstat -ntlp | grep docker')}")
+            logging.debug(f"sudo ps -ef | grep docker | grep port: {self._ssh_direct.execute('sudo ps -ef | grep docker | grep port')}")
             raise
 
     def inspect(self, container_id):
