@@ -13,19 +13,20 @@ class Mongodb:
             self._host.SshDirect) else 'mongodb.default.svc.cluster.local'
         self.PORT = 27017
 
-    def connection(self):
-        return self._get_connection()
+    @property
+    def client(self):
+        return self._get_client()
 
     @property
     def tunnel(self):
         tunnel = self._host.TunnelManager.get_or_create('mongodb', self.DNS_NAME, self.PORT)
         return tunnel
 
-    def _get_connection(self, credentials=None):
+    def _get_client(self, credentials=None):
         uri = f"mongodb://{self.tunnel.local_endpoint}" if not credentials else \
             f"mongodb://{credentials['username']}:{credentials['password']}@{self.tunnel.local_endpoint}"
-        connection = MongoClient(uri)
-        return connection
+        client = MongoClient(uri)
+        return client
 
     @staticmethod
     def ping(mongodb_conn):
@@ -36,7 +37,7 @@ class Mongodb:
             raise Exception("failed to connect to mongodb")
 
     def verify_functionality(self):
-        mongodb_conn = self.connection()
+        mongodb_conn = self.client
         self.ping(mongodb_conn=mongodb_conn)
 
 
