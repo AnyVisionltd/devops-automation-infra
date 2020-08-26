@@ -8,6 +8,7 @@ from pytest_automation_infra.helpers import hardware_config
 
 from devops_automation_infra.utils.host import get_host_ip
 import json
+import os
 
 
 class Docker(object):
@@ -202,7 +203,10 @@ class Docker(object):
         container_name = self.container_by_name(name_regex)
         cmd = f"{self._docker_bin} logs {container_name} --tail {tail}"
         return self._ssh_direct.execute(cmd)
-
-
+    def download_container_logs(self, name_regex, local_dest, tail=30):
+        content = self.get_container_logs(name_regex, tail)
+        log_path = os.path.join(local_dest, name_regex)
+        with open(log_path, 'w') as f:
+            f.write(content)
 
 plugins.register("Docker", Docker)
