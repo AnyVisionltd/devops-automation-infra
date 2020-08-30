@@ -12,14 +12,14 @@ class Redis(object):
         self._host = host
         self.DNS_NAME = 'redis.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'redis-server.default.svc.cluster.local'
         self.PORT = 6379
-        self.PASSWORD = ""
 
     @property
     def tunnel(self):
         return self._host.TunnelManager.get_or_create('redis', self.DNS_NAME, self.PORT)
 
     def create_client(self):
-        return redis.Redis(host=self.DNS_NAME, port=self.tunnel.local_port, password=self.PASSWORD, db=0)
+        host, port = self.tunnel.host_port
+        return redis.Redis(host=host, port=port, db=0)
 
     @property
     def _redis(self):
