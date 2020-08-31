@@ -20,6 +20,9 @@ pipeline {
         ansiColor('xterm')
         buildDiscarder(logRotator(numToKeepStr:'50'))
     }
+    triggers {
+        issueCommentTrigger('^\\/rebuild')
+    }
     parameters {
         string(name: 'AUTOMATION_INFRA_BRANCH', defaultValue: 'master', description: 'The automation_infra branch to include in this pipeline')
         string(name: 'CORE_PRODUCT_BRANCH', defaultValue: 'development', description: 'The core-product branch to include in this pipeline')
