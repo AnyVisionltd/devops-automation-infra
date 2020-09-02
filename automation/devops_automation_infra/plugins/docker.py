@@ -209,4 +209,9 @@ class Docker(object):
         with open(log_path, 'w') as f:
             f.write(content)
 
+    def clear_container_logs(self, name_regex):
+        container_name = self.container_by_name(name_regex)
+        logpath = self.inspect(container_name)['LogPath']
+        return self._ssh_direct.execute(f'truncate -s 0 {logpath}')
+
 plugins.register("Docker", Docker)
