@@ -9,7 +9,7 @@ from pytest_automation_infra.helpers import hardware_config
 from devops_automation_infra.utils.host import get_host_ip
 import json
 import os
-
+import ast
 
 class Docker(object):
 
@@ -135,6 +135,11 @@ class Docker(object):
         cmd = f"{self._docker_bin} run {docker_args} --network {network} {image_name}"
         self.try_executing_and_verbosely_log_error(cmd, timeout=10000)
 
+    def container_envs(self, service_name):
+        container_name = self.container_by_name(service_name)
+        cmd = f"{self._docker_bin} inspect -f '{{{{json .Config.Env }}}}' {container_name}"
+        return {env.split("=")[0]:env.split("=")[1] for env in ast.literal_eval(self.try_executing_and_verbosely_log_error(cmd, timeout=10000))}
+
     def overwrite_and_run_container_by_service_with_env(self, service_name, envs={}, is_detach_mode=True, **kwargs):
         network = self._first_network_by_name(service_name)
         image_name = self._first_image_by_name(service_name)
@@ -203,6 +208,7 @@ class Docker(object):
         container_name = self.container_by_name(name_regex)
         cmd = f"{self._docker_bin} logs {container_name} --tail {tail}"
         return self._ssh_direct.execute(cmd)
+
     def download_container_logs(self, name_regex, local_dest, tail=30):
         content = self.get_container_logs(name_regex, tail)
         log_path = os.path.join(local_dest, name_regex)
