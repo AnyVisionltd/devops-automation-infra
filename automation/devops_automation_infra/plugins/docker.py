@@ -5,6 +5,7 @@ from automation_infra.utils.waiter import wait_for_predicate_nothrow
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
+from automation_infra.utils import waiter
 
 from devops_automation_infra.utils.host import get_host_ip
 import json
@@ -74,6 +75,14 @@ class Docker(object):
         container_name = self.container_by_name(name_regex)
         cmd = f'{self._docker_bin} wait {container_name}'
         self.try_executing_and_verbosely_log_error(cmd, timeout=timeout_command)
+
+    def get_container_status(self, name_regex):
+        container_name = self.container_by_name(name_regex)
+        cmd = f"{self._docker_bin} inspect --format='{{{{.State.Status}}}}' {container_name}"
+        return self._ssh_direct.execute(cmd)
+
+    def wait_for_container_status(self, name_regex, status, timeout=100):
+        waiter.wait_nothrow(lambda: self.get_container_status(name_regex) == status, timeout=timeout)
 
     def copy_file_to_container(self, service_name, file_path, docker_dest_path):
         filename = file_path.split("/")[-1]
