@@ -79,10 +79,10 @@ class Docker(object):
     def get_container_status(self, name_regex):
         container_name = self.container_by_name(name_regex)
         cmd = f"{self._docker_bin} inspect --format='{{{{.State.Status}}}}' {container_name}"
-        return self._ssh_direct.execute(cmd)
+        return self.try_executing_and_verbosely_log_error(cmd).strip()
 
     def wait_for_container_status(self, name_regex, status, timeout=100):
-        waiter.wait_nothrow(lambda: self.get_container_status(name_regex) == status, timeout=timeout)
+        waiter.wait_for_predicate(lambda: self.get_container_status(name_regex) == status, timeout=timeout)
 
     def copy_file_to_container(self, service_name, file_path, docker_dest_path):
         filename = file_path.split("/")[-1]
