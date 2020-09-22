@@ -6,9 +6,9 @@ pipeline {
         GIT_REPO_NAME = 'devops-automation-infra'
         GIT_CREDS = credentials('av-jenkins-reader')
         TEST_TARGET_BRANCH = 'master'
-        EMAIL_TO = 'peterm@anyvision.co'
-        KVM_MACHINE_IP = '192.168.70.35'
-        KVM_MACHINE_CREDS = credentials("office-il-servers")
+        EMAIL_TO = 'orielh@anyvision.co'
+        HABERTEST_HEARTBEAT_SERVER = '192.168.70.7:7080'
+        HABERTEST_PROVISIONER = '192.168.70.7:8080'
     }
     agent {
         label 'iloffice'
@@ -25,11 +25,22 @@ pipeline {
     }
     parameters {
         string(name: 'AUTOMATION_INFRA_BRANCH', defaultValue: 'master', description: 'The automation_infra branch to include in this pipeline')
-        string(name: 'CORE_PRODUCT_BRANCH', defaultValue: 'development', description: 'The core-product branch to include in this pipeline')
     }
     stages {
         stage ('Clone the automation_infra repo') {
             steps {
+                script {
+                    if (env.CHANGE_BRANCH) {
+                      def buildNumber = env.BUILD_NUMBER as int
+                      echo "Aborting previous build: ${buildNumber - 1}"
+                      if (buildNumber > 1) milestone(buildNumber - 1)
+                      milestone(buildNumber)
+                    }
+                }
+                script {
+                    sh "rm devops-automation-infra automation-infra -rf"
+                    sh "mkdir devops-automation-infra && mv -t devops-automation-infra automation Jenkinsfile"
+                }
                 checkout changelog: false, poll: false, scm: [
                     $class: 'GitSCM',
                     branches: [[name: params.AUTOMATION_INFRA_BRANCH ]],
@@ -37,86 +48,30 @@ pipeline {
                        relativeTargetDir: 'automation-infra/']],
                     userRemoteConfigs: [[credentialsId: 'av-jenkins-reader', url: "https://github.com/AnyVisionltd/automation-infra.git"]]
                 ]
+                sh "echo finished cloning successfully"
             }
         }
-        stage ('Set Remote connection to KVM machine') {
+        stage ('Build automation proxy container') {
+            steps{
+                dir ('automation-infra'){
+                    sh(script: "make push-automation-proxy")
+                }
+            }
+        }
+        stage('Run integration tests') {
             steps {
-                script {
-                    remote.name = "kvm-machine"
-                    remote.host = "${env.KVM_MACHINE_IP}"
-                    remote.allowAnyHosts = true
-                    remote.user = "${env.KVM_MACHINE_CREDS_USR}"
-                    remote.password = "${env.KVM_MACHINE_CREDS_PSW}"
-                }
-            }
-        }
-        stage('Move devops folder') {
-            steps {
-                script {
-                    sh "mkdir -p devops-automation-infra && mv -n automation devops-automation-infra"
-                }
-            }
-        }
-        stage('Run unit tests') {
-            steps {
-                script {
-                    sh "echo 'Not yet implemented!'"
-                }
-            }
-        }
-        stage('Create VM for executing tests upon') {
-            stages {
-                stage('Spin up VM') {
-                    steps {
-                        script {
-                            env.vminfo = sshCommand (
-                                remote: remote,
-                                command: '/home/user/automation-infra/hypervisor_cli.py --allocator=localhost:8080 create --image=ubuntu-compose_v2 --cpu=10 --ram=20 --size=150 --gpus=1 --networks bridge'
-                            )
-                            env.vmip = sh (
-                                script: "echo '${env.vminfo}' | jq  .info.net_ifaces[0].ip",
-                                returnStdout: true
-                            ).trim()
-                            echo "vmip: ${env.vmip}"
-                            if (env.vmip == null) {
-                                echo "vmip was null, failing.."
-                                currentBuild.result = "FAILURE"
-                                throw new Exception("wasnt able to allocate a vm: env.vminfo")
-                            }
-                        }
-                    }
-                }
-                stage('Create the hardware.yaml') {
-                    steps {
-                        sh (
-                          script: "make -f ./automation-infra/Makefile-env set-connection-file HOST_IP=${env.vmip} USERNAME=root PASS=root CONN_FILE_PATH=${WORKSPACE}/hardware.yaml && cat ${WORKSPACE}/hardware.yaml"
-                        )
-                    }
-                }
-                stage('Run integration tests') {
-                    steps {
-                        sh (
-                            script: "cd ./automation-infra/ && ./run_tests.sh -p devops_product_manager ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --hardware=${WORKSPACE}/hardware.yaml"
-                        )
-                    }
-                }
+                //dir ('automation-infra'){
+                    sh (
+                        script: "cd automation-infra && ./containerize.sh python -m pytest -p pytest_automation_infra -p devops_product_manager --provisioner ${env.HABERTEST_PROVISIONER} ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --log-cli-level info --fixture-scope session"
+                    )
+                //}
             }
         }
     } // end of stages
     post {
         always {
-            script {
-                vmname = sh (
-                    script: "echo '${env.vminfo}' | jq .info.name",
-                    returnStdout: true
-                ).trim()
-                sshCommand (
-                    remote: remote,
-                    command: "/home/user/automation-infra/hypervisor_cli.py --allocator=localhost:8080 delete --name ${vmname}"
-                )
-            }
             archiveArtifacts artifacts: '**/logs/**/*', fingerprint: true
-            cleanWs()
+            echo "post build stage :)"
         }
         failure {
             echo "${currentBuild.result}, exiting now..."
