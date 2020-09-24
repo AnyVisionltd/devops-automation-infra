@@ -60,6 +60,7 @@ class Rabbitmq:
         self.virtual_host = '/'
         self._amqp_tunnel = None
         self._admin_tunnel = None
+        self._amqp_connection = None
 
     @property
     def amqp_tunnel(self):
@@ -76,6 +77,20 @@ class Rabbitmq:
     def create_amqp_connection(self):
         credentials = pika.PlainCredentials(self.user, self.password)
         return Connection(*self.amqp_tunnel.host_port, self.virtual_host, credentials)
+
+    def get_amqp_connection(self):
+        if not self._amqp_connection:
+            self._amqp_connection = self.create_amqp_connection()
+        assert self._amqp_connection.ping()
+        return self._amqp_connection
+
+    def get_queue(self, queue_name):
+        rmq_connection = self.get_amqp_connection()
+        return rmq_connection.channel.queue_declare(queue=queue_name, passive=True)
+
+    def get_queue_message_count(self, queue_name):
+        queue = self.get_queue(queue_name)
+        return queue.method.message_count
 
     def get_queue_list(self):
         url = f"http://{self.admin_tunnel.local_endpoint}/api/queues/{self.virtual_host if self.virtual_host != '/' else '%2F'}"
