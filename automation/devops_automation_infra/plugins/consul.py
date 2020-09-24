@@ -98,8 +98,8 @@ class Consul(object):
             raise Exception("Failed leader is unspecified")
         return leader
 
-    def get_all_keys(self):
-        _, data = self._consul.kv.get("", recurse=True)
+    def get_all_keys(self, folder=""):
+        _, data = self._consul.kv.get(folder, recurse=True)
         if data is None:
             return None
         return dict((x['Key'], x['Value']) for x in data)
