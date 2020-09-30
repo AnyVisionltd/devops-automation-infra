@@ -76,8 +76,9 @@ class Consul(object):
         res = self._consul.kv.delete(key, recurse=recurse)
         return res
 
-    def register_service(self, name, service_id, address, port, check):
-        res = self._consul.agent.service.register(name=name, service_id=service_id, address=address, port=port, check=check)
+    def register_service(self, name, service_id, address, port, check, meta=None):
+        res = self._consul.agent.service.register(
+            name=name, service_id=service_id, address=address, port=port, check=check, meta=meta)
         return res
 
     def ping_ttl_check(self, check_id):
