@@ -31,6 +31,11 @@ class Docker(object):
     def _container_by_name_cmd(self, name_regex):
         return f'{self._docker_bin} ps -a --format "{{{{.Names}}}}" --filter Name=".*{name_regex}.*"'
 
+    def service_full_name(self, name_regex):
+        logging.debug(f"restarting container {name_regex}")
+        cmd = self._container_by_name_cmd(name_regex)
+        return self.try_executing_and_verbosely_log_error(cmd).strip()
+
     def _container_id_by_name_cmd(self, name_regex):
         return f'{self._docker_bin} ps -a --format "{{{{.ID}}}}" --filter Name=".*{name_regex}.*"'
 
