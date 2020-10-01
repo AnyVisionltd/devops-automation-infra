@@ -76,10 +76,27 @@ class Consul(object):
         res = self._consul.kv.delete(key, recurse=recurse)
         return res
 
-    def register_service(self, name, service_id, address, port, check, meta=None):
+    def register_service(self, name, service_id, address, port, check):
         res = self._consul.agent.service.register(
-            name=name, service_id=service_id, address=address, port=port, check=check, meta=meta)
+            name=name, service_id=service_id, address=address, port=port, check=check)
         return res
+
+    # python-consul library does not support consul registration with meta data
+    # This function use direct http request to consul in order to register service with meta data
+    def register_service_with_meta(self, name, service_id, address, port, meta, check=None):
+        payload = {"name": name, "id": service_id, "address": address, "port": port, "meta": meta}
+        if check:
+            payload["check"] = check
+
+        params = []
+        if self._consul.agent.service.agent.token:
+            params.append(('token', self._consul.agent.service.agent.token))
+
+        return self._consul.agent.service.agent.http.put(
+            consul.base.CB.bool(),
+            '/v1/agent/service/register',
+            params=params,
+            data=json.dumps(payload))
 
     def ping_ttl_check(self, check_id):
         self._consul.agent.check.ttl_pass(check_id=check_id)
