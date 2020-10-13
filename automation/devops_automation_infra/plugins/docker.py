@@ -1,5 +1,6 @@
 import logging
 from distutils.util import strtobool
+import time
 
 from automation_infra.utils.waiter import wait_for_predicate_nothrow
 from infra.model import plugins
@@ -88,6 +89,17 @@ class Docker(object):
 
     def wait_for_container_status(self, name_regex, status, timeout=100):
         waiter.wait_for_predicate(lambda: self.get_container_status(name_regex) == status, timeout=timeout)
+
+    def wait_service_status_x_times(self, container_regex, status, times=5, interval=1, timeout=60):
+        success_counter = 0
+        before = time.time()
+        while success_counter <= times:
+            if time.time() - before > timeout:
+                raise TimeoutError(f"Time has over , got {success_counter} succeed times")
+            if self.get_container_status(container_regex) == status:
+                success_counter += 1
+            time.sleep(interval)
+
 
     def copy_file_to_container(self, service_name, file_path, docker_dest_path):
         filename = file_path.split("/")[-1]
