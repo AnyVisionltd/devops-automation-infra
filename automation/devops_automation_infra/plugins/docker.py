@@ -100,6 +100,14 @@ class Docker(object):
                 success_counter += 1
             time.sleep(interval)
 
+    def get_container_health_status(self, name_regex):
+        container_name = self.container_by_name(name_regex)
+        cmd = f"{self._docker_bin} inspect --format='{{{{.State.Health.Status}}}}' {container_name}"
+        return self.try_executing_and_verbosely_log_error(cmd).strip()
+
+    def wait_container_health_status(self, name_regex, status, timeout=100):
+        waiter.wait_for_predicate(lambda: self.get_container_health_status(name_regex) == status, timeout=timeout)
+
 
     def copy_file_to_container(self, service_name, file_path, docker_dest_path):
         filename = file_path.split("/")[-1]
