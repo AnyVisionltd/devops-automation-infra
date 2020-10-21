@@ -69,6 +69,15 @@ class Consul(object):
         payload = self._consul.kv.get(key)[1]['Value']
         return self._decode_payload(payload)
 
+    def get_entries(self, key):
+        entries = self._consul.kv.get(key, recurse=True)
+        if entries[1] is None:
+            return None
+        result = {"Index" : entries[1][0]['ModifyIndex']}
+        result["Values"] = [{"Value" : self._decode_payload(entry['Value']),
+                             "Index" :  entry['ModifyIndex']}
+                            for entry in entries[1]]
+        return result
 
     def get_key_if_exists(self, key):
         value = None
