@@ -58,12 +58,17 @@ class Consul(object):
         res = self._consul.kv.get(key)[1]['Value']
         return res
 
-    def get_value(self, key):
-        plain_value = self._consul.kv.get(key)[1]['Value'].decode()
+    def _decode_payload(self, payload):
+        plain_value = payload.decode()
         try:
             return json.loads(plain_value)
         except Exception:
             return plain_value
+
+    def get_value(self, key):
+        payload = self._consul.kv.get(key)[1]['Value']
+        return self._decode_payload(payload)
+
 
     def get_key_if_exists(self, key):
         value = None
