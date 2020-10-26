@@ -116,6 +116,8 @@ class Seaweed(ResourceManager):
         self.upload_fileobj(file_obj, bucket, s3_path)
         return f'{bucket}/{s3_path}'
 
+    def download_resource_from_s3(self, bucket, s3_path, local_folder):
+        self.download_to_filesystem(s3_path, local_folder, bucket)
 
     def deploy_multiple_resources_to_s3(self, aws_file_list, aws_folder, s3_folder):
         resources_s3_list = []
