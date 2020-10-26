@@ -35,8 +35,7 @@ class Connection(object):
     def fetch_count(self, query):
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(query)
-            res = cursor.fetchone()
-        return res['count']
+            return cursor.rowcount
 
     def execute(self, query):
         with closing(self.connection.cursor()) as c:
