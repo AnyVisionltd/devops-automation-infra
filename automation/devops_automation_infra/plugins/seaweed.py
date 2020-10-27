@@ -7,7 +7,7 @@ from botocore.exceptions import ClientError
 import boto3
 import os
 import io
-
+from automation_infra.utils import waiter
 from automation_infra.plugins.resource_manager import ResourceManager
 
 
@@ -125,6 +125,18 @@ class Seaweed(ResourceManager):
             resources_s3_list.append(
             self.deploy_resource_to_s3(os.path.join(aws_folder, resource), os.path.join(s3_folder, resource)))
         return resources_s3_list
+
+    def stop_service(self):
+        self._host.Docker.stop_container("seaweedfs")
+        self._host.Docker.wait_container_down("seaweedfs")
+
+    def start_service(self):
+        self._host.Docker.start_container("seaweedfs")
+        self._host.Docker.wait_container_up("seaweedfs")
+        waiter.wait_nothrow(self.ping, timeout=30)
+
+    def service_running(self):
+        return self._host.Docker.is_container_up("seaweedfs")
 
 
 plugins.register('Seaweed', Seaweed)
