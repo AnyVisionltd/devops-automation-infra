@@ -119,6 +119,9 @@ class Seaweed(ResourceManager):
     def download_resource_from_s3(self, bucket, s3_path, local_folder):
         self.download_to_filesystem(s3_path, local_folder, bucket)
 
+    def delete_resource_from_s3(self, bucket, s3_path):
+        self.delete_file(bucket, s3_path)
+
     def deploy_multiple_resources_to_s3(self, aws_file_list, aws_folder, s3_folder):
         resources_s3_list = []
         for resource in aws_file_list:
