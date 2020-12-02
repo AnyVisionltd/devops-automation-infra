@@ -9,6 +9,7 @@ from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
 from pymysql.constants import CLIENT
 import copy
+from automation_infra.utils import waiter
 
 
 class Connection(object):
@@ -35,8 +36,7 @@ class Connection(object):
     def fetch_count(self, query):
         with closing(self.connection.cursor()) as cursor:
             cursor.execute(query)
-            res = cursor.fetchone()
-        return res['count']
+            return cursor.rowcount
 
     def execute(self, query):
         with closing(self.connection.cursor()) as c:
@@ -186,5 +186,12 @@ class Memsql(object):
     def verify_functionality(self):
         dbs = self.fetch_all("show databases")
 
+    def stop_service(self):
+        self._host.Docker.stop_container("memsql")
+
+    def start_service(self):
+        self._host.Docker.start_container("memsql")
+        self._host.Docker.wait_container_up("memsql")
+        waiter.wait_nothrow(self.ping, timeout=30)
 
 plugins.register('Memsql', Memsql)
