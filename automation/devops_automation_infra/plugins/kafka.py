@@ -37,7 +37,7 @@ class Kafka(object):
             raise
 
     def _create_connection(self):
-        tunnel = self._host.TunnelManager.get_or_create('kafka', self._host.ip, Kafka.RPYC_PORT)
+        tunnel = self._host.TunnelManager.get_or_create('kafka', "localhost", Kafka.RPYC_PORT)
         return waiter.wait_for_predicate_nothrow(
             lambda: rpyc.connect(*tunnel.host_port, config={'allow_all_attrs': True, 'sync_request_timeout': 120}),
             timeout=10)
