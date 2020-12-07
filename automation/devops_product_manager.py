@@ -2,7 +2,11 @@ import logging
 import os
 import pytest
 
+from automation_infra.utils import waiter
 from pytest_automation_infra import helpers, determine_scope
+
+from devops_automation_infra.plugins.memsql import Memsql
+from devops_automation_infra.plugins.postgresql import Postgresql
 from devops_automation_infra.plugins.docker_compose import DockerCompose
 
 
@@ -38,6 +42,11 @@ def pytest_addoption(parser):
                      help="yaml file to pull and up")
 
 
+def _wait_infra_services_up(host):
+    waiter.wait_nothrow(host.Memsql.ping, timeout=60)
+    waiter.wait_nothrow(host.Postgresql.ping, timeout=60)
+
+
 @pytest.fixture(scope=determine_scope, autouse=True)
 def devops_installer(request, base_config):
     logging.info("running docker-compose-devops setup..")
@@ -55,6 +64,7 @@ def devops_installer(request, base_config):
         try:
             remote_pull_compose(host, remote_compose_file_path)
             remote_up_compose(host, remote_compose_file_path)
+            _wait_infra_services_up(host)
         except Exception as e:
             logging.exception(f"Failed to run compose")
             raise e
