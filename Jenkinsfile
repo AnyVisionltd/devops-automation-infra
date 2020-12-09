@@ -9,8 +9,8 @@ pipeline {
         EMAIL_TO = 'orielh@anyvision.co'
         HABERTEST_HEARTBEAT_SERVER='https://heartbeat-server.tls.ai'
         HABERTEST_PROVISIONER='https://provisioner.tls.ai'
-        SSL_CERT='$HOME/.habertest/habertest.crt'
-        SSL_KEY='$HOME/.habertest/habertest.key'
+        HABERTEST_SSL_CERT='$HOME/.habertest/habertest.crt'
+        HABERTEST_SSL_KEY='$HOME/.habertest/habertest.key'
 
     }
     agent {
