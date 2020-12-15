@@ -108,12 +108,26 @@ class Seaweed(ResourceManager):
     def http_direct_path(self, stream_s3_path):
         return os.path.join(f"http://{self.filer_host}:{self.filer_port}/buckets", stream_s3_path.replace('s3:///', ''))
 
-
-    def deploy_resource_to_s3(self, resource_path, s3_path):
+    def deploy_resource_to_s3(self, resource_path, s3_path, chunk_size=4 * 1024 * 1024):
         bucket = "automation_infra"
-        file_bytes = self._host.ResourceManager.get_raw_resource(resource_path)
-        file_obj = io.BytesIO(file_bytes)
-        self.upload_fileobj(file_obj, bucket, s3_path)
+        aws_s3_client = self._host.ResourceManager.client
+        uploader = self.client.create_multipart_upload(Bucket=bucket, Key=s3_path)
+        s3_object = aws_s3_client.get_object(Bucket="anyvision-testing", Key=resource_path)
+        # Lets do 4MB chunks
+        s3_data_stream = s3_object['Body'].iter_chunks(chunk_size=chunk_size)
+
+        parts = []
+        for i, chunk in enumerate(s3_data_stream):
+            part = self.client.upload_part(Bucket=bucket, Key=s3_path,
+                                       PartNumber=i, UploadId=uploader['UploadId'],
+                                       Body=chunk)
+            parts.append({"PartNumber": i, "ETag": part["ETag"]})
+
+        result = self.client.complete_multipart_upload(Bucket=bucket,
+                                                       Key=s3_path,
+                                                       UploadId=uploader['UploadId'],
+                                                       MultipartUpload={"Parts": parts})
+        logging.debug(f"upload result to {bucket}/{s3_path} is {result}")
         return f'{bucket}/{s3_path}'
 
     def download_resource_from_s3(self, bucket, s3_path, local_folder):
