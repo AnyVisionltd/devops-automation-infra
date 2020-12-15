@@ -155,11 +155,17 @@ class Docker(object):
 
     def run_container_by_service_with_env(self, service_name, envs={}, remove_container_after_execute=False,
                                           is_detach_mode=True, **kwargs):
+        container_name = self.container_by_name(service_name)
+        container_id = self.container_ids_by_name(container_name)
+        assert len(container_id)
+        inspect = self.inspect(container_id[0])
         docker_args = ""
         for setting, value in kwargs.items():
             docker_args += f' --{setting} {value} '
         for setting, value in envs.items():
             docker_args += f' -e {setting}={value}'
+        for volume in inspect["Mounts"]:
+            docker_args += f' -v {volume["Source"]}:{volume["Destination"]}'
         if remove_container_after_execute:
             docker_args += " --rm "
         network = self._first_network_by_name(service_name)
@@ -178,6 +184,9 @@ class Docker(object):
         network = self._first_network_by_name(service_name)
         image_name = self._first_image_by_name(service_name)
         container_name = self.container_by_name(service_name)
+        container_id = self.container_ids_by_name(container_name)
+        assert len(container_id)
+        inspect = self.inspect(container_id[0])
         network_aliases = self._aliases_by_container_name(container_name)
         dns_aliases = [alias for alias in network_aliases if alias.endswith(".tls.ai")]
 
@@ -192,6 +201,8 @@ class Docker(object):
             docker_args += f' --{setting} {value} '
         for setting, value in envs.items():
             docker_args += f' -e {setting}={value}'
+        for volume in inspect["Mounts"]:
+            docker_args += f' -v {volume["Source"]}:{volume["Destination"]}'
         if is_detach_mode:
             docker_args += ' -d '
         cmd = f"{self._docker_bin} run {docker_args} --network {network} {image_name}"
