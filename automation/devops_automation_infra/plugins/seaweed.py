@@ -108,7 +108,7 @@ class Seaweed(ResourceManager):
     def http_direct_path(self, stream_s3_path):
         return os.path.join(f"http://{self.filer_host}:{self.filer_port}/buckets", stream_s3_path.replace('s3:///', ''))
 
-    def deploy_resource_to_s3(self, resource_path, s3_path, chunk_size=4 * 1024 * 1024):
+    def deploy_resource_to_s3(self, resource_path, s3_path, chunk_size=100 * 1024 * 1024):
         bucket = "automation_infra"
         aws_s3_client = self._host.ResourceManager.client
         uploader = self.client.create_multipart_upload(Bucket=bucket, Key=s3_path)
