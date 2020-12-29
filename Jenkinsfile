@@ -65,7 +65,7 @@ pipeline {
             steps {
                 //dir ('automation-infra'){
                     sh (
-                        script: "cd automation-infra && ./containerize.sh python -m pytest -p pytest_automation_infra -p devops_product_manager --provisioner ${env.HABERTEST_PROVISIONER} ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --log-cli-level info --fixture-scope session"
+                        script: "cd automation-infra && ./run/env_vars.sh -p devops_product_manager ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --log-cli-level info"
                     )
                 //}
             }
