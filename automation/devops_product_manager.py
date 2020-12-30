@@ -3,7 +3,7 @@ import os
 import pytest
 
 from automation_infra.utils import waiter
-from pytest_automation_infra import helpers, determine_scope
+from pytest_automation_infra import helpers #, determine_scope
 
 from devops_automation_infra.plugins.memsql import Memsql
 from devops_automation_infra.plugins.postgresql import Postgresql
@@ -47,7 +47,7 @@ def _wait_infra_services_up(host):
     waiter.wait_nothrow(host.Postgresql.ping, timeout=60)
 
 
-@pytest.fixture(scope=determine_scope, autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def devops_installer(request, base_config):
     logging.info("running docker-compose-devops setup..")
     host = next(iter(base_config.hosts.values()))

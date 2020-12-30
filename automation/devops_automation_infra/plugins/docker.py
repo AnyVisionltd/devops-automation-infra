@@ -43,6 +43,19 @@ class Docker(object):
     def _container_ip_address_cmd(self):
         return f'{self._docker_bin} inspect -f "{{{{range .NetworkSettings.Networks}}}}{{{{.IPAddress}}}}{{{{end}}}}"'
 
+    def login(self):
+        connected_ssh_module = self._ssh_direct
+        logging.debug("doing docker login")
+        # host_running_test_ip = get_host_running_test_ip()
+        remote_home = connected_ssh_module.execute("echo $HOME").strip()
+        # TODO: check this:
+        # if host_running_test_ip != connected_ssh_module.get_ip():
+        docker_login_host_path = f"{os.getenv('HOME')}/.docker/config.json"
+        assert os.path.exists(docker_login_host_path), "There is not docker credential in host running test"
+        connected_ssh_module.execute(f"mkdir -p {remote_home}/.docker")
+        connected_ssh_module.put(docker_login_host_path, f"{remote_home}/.docker/")
+        connected_ssh_module.execute("docker login https://gcr.io")
+
     def restart_container_by_service_name(self, service_name):
         logging.debug(f"restarting container {service_name}")
         cmd = self._container_by_name_cmd(service_name) + f"| xargs --no-run-if-empty {self._docker_bin} restart"

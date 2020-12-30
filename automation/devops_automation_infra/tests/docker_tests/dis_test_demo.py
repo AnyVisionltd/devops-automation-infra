@@ -4,11 +4,6 @@ import time
 from pytest_automation_infra.helpers import hardware_config
 
 # These plugins need to be imported even though theyre grayed out:
-from automation_infra.plugins.ssh import SSH
-from devops_automation_infra.plugins.seaweed import Seaweed
-from devops_automation_infra.plugins.consul import Consul
-from devops_automation_infra.plugins.kafka import Kafka
-from devops_automation_infra.plugins.memsql import Memsql
 
 hardware = {"type": "ori_pass"}
 
