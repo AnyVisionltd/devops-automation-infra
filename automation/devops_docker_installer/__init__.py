@@ -69,10 +69,9 @@ def pytest_after_proxy_container(base_config, request):
         logging.info("devops installer already ran")
         return
     logging.info("running devops installer..")
-    return
     host = next(iter(base_config.hosts.values()))
     compose_yaml_file = request.config.getoption("--yaml-file")
-    docker_compose_dir = os.path.realpath(f'{os.path.split(__file__)[0]}/devops_automation_infra/docker-compose')
+    docker_compose_dir = os.path.realpath(f'{os.path.split(__file__)[0]}/../devops_automation_infra/docker-compose')
     remote_compose_dir = f"{host.SshDirect.home_dir}/compose_v2"
     remote_compose_file_path = f"{remote_compose_dir}/{compose_yaml_file}"
     if request.config.getoption("--skip-docker-setup"):
