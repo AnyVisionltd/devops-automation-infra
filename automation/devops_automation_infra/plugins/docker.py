@@ -79,6 +79,8 @@ class Docker(object):
 
     def wait_container_down(self, name_regex, timeout_command=100):
         container_name = self.container_by_name(name_regex)
+        if not container_name:
+            return
         cmd = f'{self._docker_bin} wait {container_name}'
         self.try_executing_and_verbosely_log_error(cmd, timeout=timeout_command)
 
