@@ -190,10 +190,11 @@ class ResourceManager(object):
         logging.info("verifying resource_manager functionality")
         anv_testing_bucket = "anyvision-testing"
         files = self.get_s3_files(anv_testing_bucket, "")
-        self.upload_from_filesystem("media/high_level_design.xml", "temp/")
-        assert self.file_exists(anv_testing_bucket, "temp/high_level_design.xml")
-        self.delete_file(anv_testing_bucket, 'temp/high_level_design.xml')
-        assert not self.file_exists(anv_testing_bucket, "temp/high_level_design.xml")
+        file_to_upload = "Jenkinsfile"
+        self.upload_from_filesystem(file_to_upload, "temp/")
+        assert self.file_exists(anv_testing_bucket, f"temp/{file_to_upload}")
+        self.delete_file(anv_testing_bucket, f'temp/{file_to_upload}')
+        assert not self.file_exists(anv_testing_bucket, f"temp/{file_to_upload}")
         resource_to_test = files[0]
         test_content = self.get_raw_resource(resource_to_test)
         self.deloy_resource_to_proxy_container(resource_to_test, "/tmp/resource")
