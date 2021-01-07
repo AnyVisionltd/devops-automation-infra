@@ -144,7 +144,10 @@ class Docker(object):
         return execute
 
     def container_by_name(self, name_regex):
-        return self._ssh_direct.execute(self._container_by_name_cmd(name_regex)).strip().split()[0]
+        containers = self._ssh_direct.execute(self._container_by_name_cmd(name_regex)).strip()
+        if not containers:
+            return
+        return containers.split()[0]
 
     def container_ids_by_name(self, name_regex):
         return self._ssh_direct.execute(self._container_id_by_name_cmd(name_regex)).strip().split('\n')
