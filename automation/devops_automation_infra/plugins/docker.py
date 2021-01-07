@@ -174,7 +174,7 @@ class Docker(object):
         cmd = f"{self._docker_bin} inspect -f '{{{{json .Config.Env }}}}' {container_name}"
         return {env.split("=")[0]:env.split("=")[1] for env in ast.literal_eval(self.try_executing_and_verbosely_log_error(cmd, timeout=10000))}
 
-    def overwrite_and_run_container_by_service_with_env(self, service_name, envs={}, is_detach_mode=True, **kwargs):
+    def overwrite_and_run_container_by_service_with_env(self, service_name, envs={}, is_detach_mode=True,is_restart_always=True, **kwargs):
         network = self._first_network_by_name(service_name)
         image_name = self._first_image_by_name(service_name)
         container_name = self.container_by_name(service_name)
@@ -184,7 +184,8 @@ class Docker(object):
         self.remove_containers_by_name(container_name)
 
         docker_args = f" --name {container_name}"
-
+        if is_restart_always:
+            docker_args += " --restart always "
         if dns_aliases:
             docker_args += f" --network-alias {dns_aliases[0]}"
 
