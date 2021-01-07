@@ -1,14 +1,17 @@
 import logging
 import os
 import pytest
+import pathlib
 
 from automation_infra.utils import waiter
-from pytest_automation_infra import helpers #, determine_scope
+from pytest_automation_infra import helpers
 
+from automation_infra.plugins.admin import Admin
 from devops_automation_infra.plugins.memsql import Memsql
 from devops_automation_infra.plugins.postgresql import Postgresql
 from devops_automation_infra.plugins.docker_compose import DockerCompose
 
+TMP_DIR = "/tmp/habertest"
 
 def remove_compose_files(host, remote_compose_dir):
     host.SshDirect.execute(f"sudo rm -rf {remote_compose_dir}")
@@ -47,9 +50,26 @@ def _wait_infra_services_up(host):
     waiter.wait_nothrow(host.Postgresql.ping, timeout=60)
 
 
-@pytest.fixture(scope='session', autouse=True)
-def devops_installer(request, base_config):
-    logging.info("running docker-compose-devops setup..")
+def already_ran(request):
+    return os.path.exists(f"{TMP_DIR}/{request.session.id}/{os.path.basename(__file__)}")
+
+
+def leave_trace(request):
+    # TODO: What I want to do here is leave a trace saying that this plugin ran
+    #  and doesnt need to run again on this machine:
+    base_dir = f"{TMP_DIR}/{request.session.id}"
+    pathlib.Path(base_dir).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(f"{base_dir}/{os.path.basename(__file__)}").touch()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_after_proxy_container(base_config, request):
+    # import pdb; pdb.set_trace()
+    if already_ran(request):
+        logging.info("devops installer already ran")
+        return
+    logging.info("running devops installer..")
+    return
     host = next(iter(base_config.hosts.values()))
     compose_yaml_file = request.config.getoption("--yaml-file")
     docker_compose_dir = os.path.realpath(f'{os.path.split(__file__)[0]}/devops_automation_infra/docker-compose')
@@ -69,9 +89,12 @@ def devops_installer(request, base_config):
             logging.exception(f"Failed to run compose")
             raise e
 
-    yield  # This is to allow stopping dockers for teardown
-
-    if not request.config.getoption("--skip-docker-down") and not request.config.getoption("--skip-docker-setup"):
-        logging.debug("stopping docker-compose-core")
-        remote_stop_compose(host, remote_compose_file_path)
-        logging.debug("stopped")
+    leave_trace(request)
+    # import pdb; pdb.set_trace()
+    logging.info("devops install finished!")
+    # yield  # This is to allow stopping dockers for teardown
+    # import pdb; pdb.set_trace()
+    # if not request.config.getoption("--skip-docker-down") and not request.config.getoption("--skip-docker-setup"):
+    #     logging.debug("stopping docker-compose-core")
+    #     remote_stop_compose(host, remote_compose_file_path)
+    #     logging.debug("stopped")

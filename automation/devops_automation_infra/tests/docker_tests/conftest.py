@@ -1,2 +1,2 @@
 
-# pytest_plugins = ("pytest_devops_infra")
+# pytest_plugins = ("devops_proxy_container")
