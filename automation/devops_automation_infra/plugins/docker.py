@@ -5,6 +5,7 @@ import time
 from automation_infra.utils.waiter import wait_for_predicate_nothrow
 from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
+from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
 from automation_infra.utils import waiter
 
@@ -67,6 +68,18 @@ class Docker(object):
             self.stop_container(service_name)
         time.sleep(1)
         self.start_container(service_name)
+
+    def login(self):
+        connected_ssh_module = self._ssh_direct
+        logging.debug("doing docker login")
+        # host_running_test_ip = get_host_running_test_ip()
+        remote_home = connected_ssh_module.execute("echo $HOME").strip()
+        docker_login_host_path = f"{os.getenv('HOME')}/.docker/config.json"
+        assert os.path.exists(docker_login_host_path), "There is not docker credential in host running test"
+        if helpers.machine_id() != self._host.Admin.machine_id():
+            connected_ssh_module.execute(f"mkdir -p {remote_home}/.docker")
+            connected_ssh_module.put(docker_login_host_path, f"{remote_home}/.docker/")
+        connected_ssh_module.execute("docker login https://gcr.io")
 
     def restart_container_by_service_name(self, service_name):
         logging.debug(f"restarting container {service_name}")
