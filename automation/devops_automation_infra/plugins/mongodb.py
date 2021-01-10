@@ -3,7 +3,6 @@ from pymongo import MongoClient
 from infra.model import plugins
 from pytest_automation_infra import helpers
 from pytest_automation_infra.helpers import hardware_config
-from automation_infra.plugins.tunnel_manager import TunnelManager
 
 
 class Mongodb:
