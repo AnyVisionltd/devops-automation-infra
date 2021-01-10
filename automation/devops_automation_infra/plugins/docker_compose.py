@@ -21,6 +21,10 @@ class DockerCompose(object):
         except:
             raise Exception("docker-compose not installed")
 
+    def put_yaml(self, local_yaml, destination):
+        self._host.SshDirect.execute(f"mkdir -p {destination}")
+        self._host.SshDirect.upload(local_yaml, destination)
+
     def compose_down(self, compose_file_path):
         logging.debug(f"stopping compose {compose_file_path}")
         self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} down', timeout=60 * 20)
