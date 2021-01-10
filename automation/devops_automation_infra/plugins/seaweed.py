@@ -6,9 +6,8 @@ from pytest_automation_infra import helpers
 from botocore.exceptions import ClientError
 import boto3
 import os
-import io
 from automation_infra.utils import waiter
-from automation_infra.plugins.resource_manager import ResourceManager
+from devops_automation_infra.plugins.resource_manager import ResourceManager
 
 
 class Seaweed(ResourceManager):

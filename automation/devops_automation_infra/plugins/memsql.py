@@ -1,12 +1,9 @@
 import logging
 from contextlib import closing
 import pymysql
-from pymysql import InternalError
 
 from infra.model import plugins
-from automation_infra.plugins import tunnel_manager
 from pytest_automation_infra import helpers
-from pytest_automation_infra.helpers import hardware_config
 from pymysql.constants import CLIENT
 import copy
 from automation_infra.utils import waiter
