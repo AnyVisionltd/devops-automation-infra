@@ -1,10 +1,10 @@
 import logging
 
-from automation_infra.plugins.tunnel_manager import TunnelManager
-from devops_automation_infra.plugins import kafka as libkafka
 from pytest_automation_infra.helpers import hardware_config
 from automation_infra.utils import waiter
 from automation_infra.utils import concurrently
+
+from devops_automation_infra.plugins.kafka import Kafka
 
 
 @hardware_config(hardware={"host": {}})
