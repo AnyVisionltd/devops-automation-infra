@@ -85,5 +85,13 @@ class DockerCompose(object):
         self.purge_service(compose_file_path, service_name)
         self.run_sevice_with_environment(compose_file_path, service_name, environment_variables, doker_name=doker_name)
 
+    def create_service(self, compose_file_path, service_name):
+        cmd = f"{self.compose_bin_path} -f {compose_file_path} up --no-start --no-deps --force-recreate --remove-orphans {service_name}"
+        self._ssh_direct.execute(cmd)
+
+    def recreate_service(self, compose_file_path, service_name):
+        self.purge_service(compose_file_path, service_name)
+        self.create_service(compose_file_path, service_name)
+
 
 plugins.register("DockerCompose", DockerCompose) 
