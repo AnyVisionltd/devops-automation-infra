@@ -53,6 +53,11 @@ def test_compose(base_config):
     second_start = inspect['State']['StartedAt']
     assert first_start != second_start
 
+    logging.info("recreate the service from scratch environment should dissapear")
+    compose.recreate_service(temp_file, service_name="sasha-compose-test")
+    new_env = host.Docker.container_envs(test_container)
+    assert 'SASHA' not in new_env
+
     compose.compose_down(temp_file)
     assert host.Docker.container_by_name("sasha-compose-test") is None
 
