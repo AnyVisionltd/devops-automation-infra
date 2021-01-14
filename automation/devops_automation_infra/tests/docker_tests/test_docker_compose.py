@@ -35,6 +35,24 @@ def test_compose(base_config):
     compose_path = compose.path_from_container_id(test_container)
     assert compose_path == temp_file
 
+    logging.info("Verify no SASHA env")
+    old_env = host.Docker.container_envs(test_container)
+    assert "SASHA" not in old_env
+
+    inspect = host.Docker.inspect(test_container)
+    first_start = inspect['State']['StartedAt']
+
+    logging.info("Now restart it with SASHA environment variable")
+    compose.adjust_service_environment(temp_file, service_name="sasha-compose-test",
+                                       environment_variables={"SASHA" : "KING"},
+                                       doker_name=test_container)
+
+    inspect = host.Docker.inspect(test_container)
+    new_env = host.Docker.container_envs(test_container)
+    assert 'SASHA' in new_env
+    second_start = inspect['State']['StartedAt']
+    assert first_start != second_start
+
     compose.compose_down(temp_file)
     assert host.Docker.container_by_name("sasha-compose-test") is None
 
