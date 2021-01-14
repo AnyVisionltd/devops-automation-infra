@@ -317,4 +317,7 @@ class Docker(object):
     def labels(self, container_id):
         return self.inspect(container_id)['Config']['Labels']
 
+    def image_fqdn(self, container_id):
+        return self.inspect(container_id)['Config']['Image']
+
 plugins.register("Docker", Docker)
