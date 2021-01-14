@@ -12,7 +12,7 @@ pipeline {
 
     }
     agent {
-        label 'iloffice'
+        label 'automation'
     }
     libraries {
         lib('pipeline-library')
