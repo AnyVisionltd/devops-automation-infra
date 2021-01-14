@@ -256,6 +256,8 @@ class Docker(object):
 
     def is_container_up(self, name_regex):
         service_name = self.container_by_name(name_regex)
+        if not service_name:
+            return False
         cmd = f"{self._docker_bin} inspect -f '{{{{.State.Running}}}}' {service_name}"
         return self.try_executing_and_verbosely_log_error(cmd, timeout=100).strip() == 'true'
 
