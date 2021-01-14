@@ -20,6 +20,10 @@ class Docker(object):
         self._ssh_direct = self._host.SshDirect
         self._docker_bin = self._docker_bin_path()
 
+    @property
+    def bin_path(self):
+        return self._docker_bin
+
     def _docker_bin_path(self):
         try:
             return self._ssh_direct.execute("which docker").strip()
@@ -252,6 +256,8 @@ class Docker(object):
 
     def is_container_up(self, name_regex):
         service_name = self.container_by_name(name_regex)
+        if not service_name:
+            return False
         cmd = f"{self._docker_bin} inspect -f '{{{{.State.Running}}}}' {service_name}"
         return self.try_executing_and_verbosely_log_error(cmd, timeout=100).strip() == 'true'
 
@@ -287,5 +293,26 @@ class Docker(object):
         container_name = self.container_by_name(name_regex)
         logpath = self.inspect(container_name)['LogPath']
         return self._ssh_direct.execute(f'truncate -s 0 {logpath}')
+
+    def pull(self, image_fqdn):
+        cmd = f"{self._docker_bin} pull {image_fqdn}"
+        return self._ssh_direct.execute(cmd)
+
+    def tag(self, image_name, new_image_name):
+        cmd = f"{self._docker_bin} tag {image_name} {new_image_name}"
+        return self._ssh_direct.execute(cmd)
+
+    def rmi(self, image_name):
+        cmd = f"{self._docker_bin} rmi {image_name}"
+        return self._ssh_direct.execute(cmd)
+
+    def image_ids(self, image_regexp):
+        cmd = f"{self._docker_bin} images -q  --filter=reference='*{image_regexp}*'"
+        return self._ssh_direct.execute(cmd).strip().split('\n')
+
+    def image_inspect(self, image_id):
+        cmd = f"{self._docker_bin} insect {image_id}"
+        return json.loads(self._ssh_direct.execute(cmd).strip())[0]
+
 
 plugins.register("Docker", Docker)
