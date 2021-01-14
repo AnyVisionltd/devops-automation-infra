@@ -20,6 +20,10 @@ class Docker(object):
         self._ssh_direct = self._host.SshDirect
         self._docker_bin = self._docker_bin_path()
 
+    @property
+    def bin_path(self):
+        return self._docker_bin
+
     def _docker_bin_path(self):
         try:
             return self._ssh_direct.execute("which docker").strip()
