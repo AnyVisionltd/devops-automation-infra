@@ -294,4 +294,25 @@ class Docker(object):
         logpath = self.inspect(container_name)['LogPath']
         return self._ssh_direct.execute(f'truncate -s 0 {logpath}')
 
+    def pull(self, image_fqdn):
+        cmd = f"{self._docker_bin} pull {image_fqdn}"
+        return self._ssh_direct.execute(cmd)
+
+    def tag(self, image_name, new_image_name):
+        cmd = f"{self._docker_bin} tag {image_name} {new_image_name}"
+        return self._ssh_direct.execute(cmd)
+
+    def rmi(self, image_name):
+        cmd = f"{self._docker_bin} rmi {image_name}"
+        return self._ssh_direct.execute(cmd)
+
+    def image_ids(self, image_regexp):
+        cmd = f"{self._docker_bin} images -q  --filter=reference='*{image_regexp}*'"
+        return self._ssh_direct.execute(cmd).strip().split('\n')
+
+    def image_inspect(self, image_id):
+        cmd = f"{self._docker_bin} insect {image_id}"
+        return json.loads(self._ssh_direct.execute(cmd).strip())[0]
+
+
 plugins.register("Docker", Docker)
