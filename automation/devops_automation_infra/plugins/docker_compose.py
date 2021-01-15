@@ -7,6 +7,7 @@ from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
 import packaging.version
 
+
 class DockerCompose(object):
 
     def __init__(self, host):
@@ -22,17 +23,16 @@ class DockerCompose(object):
 
     def compose_down(self, compose_file_path):
         logging.debug(f"stopping compose {compose_file_path}")
-        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} down', timeout=60*20)
+        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} down', timeout=60 * 20)
 
     def compose_pull(self, compose_file_path):
         logging.debug(f"pulling docker images from compose {compose_file_path}")
-        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} pull -q', timeout=60*60)
+        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} pull -q', timeout=60 * 60)
 
     def compose_up(self, compose_file_path, *services):
         services_cmd = " ".join(services)
         logging.debug(f"starting compose {compose_file_path} services: ")
-        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} up -d {services_cmd}', timeout=60*20)
-
+        self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} up -d {services_cmd}', timeout=60 * 20)
 
     def restart_container_by_service_name(self, compose_file_path, container):
         try:
@@ -40,7 +40,7 @@ class DockerCompose(object):
             self._ssh_direct.execute(f"{self.compose_bin_path} -f {compose_file_path} restart {container}")
         except SSHCalledProcessError as e:
             if 'No such service' in e.stderr:
-                raise Exception("unable to find the service " + container +"\nmsg: " + e.stderr)
+                raise Exception("unable to find the service " + container + "\nmsg: " + e.stderr)
             else:
                 raise Exception(e.stderr)
 
@@ -50,11 +50,10 @@ class DockerCompose(object):
         version = self._ssh_direct.execute(cmd).strip()
         return packaging.version.parse(version)
 
-
     def path_from_container_id(self, container_id):
         labels = self._host.Docker.labels(container_id)
         compose_workdir = labels.get("com.docker.compose.project.working_dir", None)
-        compose_config = labels.get("com.docker.compose.project.config_files") 
+        compose_config = labels.get("com.docker.compose.project.config_files")
         if compose_workdir is None:
             # This feature is only enabled since 1.25.2 (Jan 2020)
             if self.version < packaging.version.Version("1.25.2"):
