@@ -93,5 +93,17 @@ class DockerCompose(object):
         self.purge_service(compose_file_path, service_name)
         self.create_service(compose_file_path, service_name)
 
+    def refresh_compose(self, compose_file_path):
+        cmd = f"{self.compose_bin_path} -f {compose_file_path} up --no-start --no-deps"
+        self._ssh_direct.execute(cmd)
 
-plugins.register("DockerCompose", DockerCompose) 
+    def services(self, compose_file_path):
+        cmd = f"docker-compose -f {compose_file_path} config  --services"
+        return self._ssh_direct.execute(cmd).strip().split('\n')
+
+    def service_images(self, compose_file_path):
+        cmd = f"docker-compose -f {compose_file_path} ps -q -a"
+        return self._ssh_direct.execute(cmd).strip().split('\n')
+
+
+plugins.register("DockerCompose", DockerCompose)
