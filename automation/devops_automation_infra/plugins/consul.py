@@ -159,6 +159,13 @@ class Consul(object):
         container.start_container_by_service(self._host, "_consul")
         waiter.wait_nothrow(self.ping, timeout=30)
 
+    def stop(self):
+        container.stop_container_by_service(self._host, "_consul")
+
+    def start(self):
+        container.restart_container_by_service(self._host, "_consul")
+        waiter.wait_nothrow(self.ping, timeout=30)
+
     def delete_storage_compose(self):
         self._host.SshDirect.execute('sudo rm /storage/consul-data/* -rf')
 
