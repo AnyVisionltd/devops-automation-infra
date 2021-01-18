@@ -314,5 +314,10 @@ class Docker(object):
         cmd = f"{self._docker_bin} insect {image_id}"
         return json.loads(self._ssh_direct.execute(cmd).strip())[0]
 
+    def labels(self, container_id):
+        return self.inspect(container_id)['Config']['Labels']
+
+    def image_fqdn(self, container_id):
+        return self.inspect(container_id)['Config']['Image']
 
 plugins.register("Docker", Docker)
