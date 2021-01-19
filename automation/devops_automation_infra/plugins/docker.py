@@ -324,4 +324,8 @@ class Docker(object):
     def image_fqdn(self, container_id):
         return self.inspect(container_id)['Config']['Image']
 
+    def change_restart_policy(self, container_id, policy):
+        cmd = f"{self._docker_bin} update {container_id} --restart={policy}"
+        self._ssh_direct.execute(cmd)
+
 plugins.register("Docker", Docker)

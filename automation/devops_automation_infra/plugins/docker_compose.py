@@ -69,20 +69,29 @@ class DockerCompose(object):
         cmd = f"{self.compose_bin_path} -f {compose_file_path} rm -s -f {service_name}"
         self._ssh_direct.execute(cmd)
 
-    def run_sevice_with_environment(self, compose_file_path, service_name, environment_variables, doker_name=None):
+    def service_docker_id(self, compose_file_path, service_name):
+        cmd = f"{self.compose_bin_path} -f {compose_file_path} ps -a -q {service_name}"
+        return self._ssh_direct.execute(cmd).strip()
+
+    def run_sevice_with_environment(self, compose_file_path, service_name, environment_variables, doker_name=None, restart_policy="no"):
         env_pairs = " ".join(f"-e {k}={v}" for k, v in environment_variables.items())
         name_cmd = f"--name {doker_name}" if doker_name is not None else ""
         cmd = f"{self.compose_bin_path} -f {compose_file_path} run --no-deps --use-aliases --service-ports -d {name_cmd} {env_pairs} {service_name}"
-        self._ssh_direct.execute(cmd)
+        container_name = self._ssh_direct.execute(cmd).strip()
+        self._host.Docker.change_restart_policy(container_name, policy=restart_policy)
 
     def service_image_fqdn(self, compose_file_path, service_name):
         cmd = f"{self.compose_bin_path} -f {compose_file_path} images -- {service_name} | tail -n -1"
         image_descriptor = self._ssh_direct.execute(cmd).strip().split()
         return f"{image_descriptor[1]}:{image_descriptor[2]}"
 
-    def adjust_service_environment(self, compose_file_path, service_name, environment_variables, doker_name=None):
+    def adjust_service_environment(self, compose_file_path, service_name, environment_variables, doker_name=None, restart_policy=None):
+        # If restart policy is not defined lets try to figure it out
+        if restart_policy is None:
+            docker_id = self.service_docker_id(compose_file_path, service_name)
+            restart_policy = self._host.Docker.image_inspect(docker_id)['HostConfig']['RestartPolicy']['Name']
         self.purge_service(compose_file_path, service_name)
-        self.run_sevice_with_environment(compose_file_path, service_name, environment_variables, doker_name=doker_name)
+        self.run_sevice_with_environment(compose_file_path, service_name, environment_variables, doker_name=doker_name, restart_policy=restart_policy)
 
     def create_service(self, compose_file_path, service_name):
         cmd = f"{self.compose_bin_path} -f {compose_file_path} up --no-start --no-deps --force-recreate --remove-orphans {service_name}"
