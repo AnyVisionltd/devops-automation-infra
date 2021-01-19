@@ -2,6 +2,7 @@ import logging
 import os
 import pytest
 import pathlib
+import compose_installer_util
 
 from automation_infra.utils import waiter
 from pytest_automation_infra import helpers
@@ -11,38 +12,8 @@ from devops_automation_infra.plugins.memsql import Memsql
 from devops_automation_infra.plugins.postgresql import Postgresql
 from devops_automation_infra.plugins.docker_compose import DockerCompose
 
+
 TMP_DIR = "/tmp/habertest"
-
-def remove_compose_files(host, remote_compose_dir):
-    host.SshDirect.execute(f"sudo rm -rf {remote_compose_dir}")
-
-
-def put_compose_files(host, core_product_dir, remote_compose_dir):
-    logging.debug(f"uploading docker-compose-core to {remote_compose_dir}")
-    host.SshDirect.execute(f"mkdir -p {remote_compose_dir}")
-    host.SshDirect.upload(f'{core_product_dir}/*', f'{remote_compose_dir}')
-
-
-def remote_stop_compose(host, remote_compose_file_path):
-    host.DockerCompose.compose_down(remote_compose_file_path)
-
-
-def remote_pull_compose(host, remote_compose_file_path):
-    host.DockerCompose.compose_pull(remote_compose_file_path)
-
-
-def remote_up_compose(host, remote_compose_file_path):
-    host.DockerCompose.compose_up(remote_compose_file_path)
-
-
-def pytest_addoption(parser):
-    parser.addoption("--skip-docker-setup", action="store_true", default=False,
-                     help="skip down, pull and up to containers, "                                                                           
-                          "only do pretest setup")
-    parser.addoption("--skip-docker-down", action="store_true", default=True,
-                     help="skip down at installer fixture session end")
-    parser.addoption("--yaml-file", action="store", default="docker-compose-devops.yml",
-                     help="yaml file to pull and up")
 
 
 def _wait_infra_services_up(host):
@@ -77,12 +48,12 @@ def pytest_after_proxy_container(base_config, request):
     if request.config.getoption("--skip-docker-setup"):
         logging.debug("skipping docker pull and up")
     else:
-        put_compose_files(host, docker_compose_dir, remote_compose_dir)
+        compose_installer_util.put_compose_files(host, docker_compose_dir, remote_compose_dir)
         helpers.do_docker_login(host.SshDirect)
-        remote_stop_compose(host, remote_compose_file_path)
+        compose_installer_util.remote_stop_compose(host, remote_compose_file_path)
         try:
-            remote_pull_compose(host, remote_compose_file_path)
-            remote_up_compose(host, remote_compose_file_path)
+            compose_installer_util.remote_pull_compose(host, remote_compose_file_path)
+            compose_installer_util.remote_up_compose(host, remote_compose_file_path)
             _wait_infra_services_up(host)
         except Exception as e:
             logging.exception(f"Failed to run compose")
