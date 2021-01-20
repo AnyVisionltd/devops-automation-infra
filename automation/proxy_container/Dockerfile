@@ -28,7 +28,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 RUN mkdir /var/run/sshd \
     && mkdir /root/.ssh \
     && chmod 0700 /root/.ssh \
-    && echo "root:pass" | chpasswd
+    && echo "root:root" | chpasswd
 
 # RUN groupadd --gid 5000 user \
 #     && useradd --home-dir /home/user --create-home --uid 5000 \
