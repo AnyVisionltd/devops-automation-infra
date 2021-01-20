@@ -22,7 +22,6 @@ def test_tunnel_ssh(base_config):
         client = paramiko.SSHClient()
         client.known_hosts = None
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        logging.info(f"Connecting via tunnel try {i}")
         client.connect(hostname="127.0.0.1", port=tunnel.local_port, username="root", password="root", look_for_keys=False, allow_agent=False, timeout=10, auth_timeout=60)
         client.exec_command("true")
         client.close()
