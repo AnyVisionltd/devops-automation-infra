@@ -5,7 +5,7 @@ from automation_infra.plugins.ssh_direct import SshDirect
 
 
 class SSH(SshDirect):
-    def connect(self, port=2222, timeout=10, user="root", password="pass"):
+    def connect(self, port=2222, timeout=10, user="root", password="root"):
         # TODO: have handle security here
         host = Host.from_args(self._host.ip, user, password, port=port, alias=self._host.alias)
         self._connection = connection.Connection(host)
