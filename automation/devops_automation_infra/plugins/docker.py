@@ -62,6 +62,10 @@ class Docker(object):
         cmd = self._container_by_name_cmd(servce_name) + f"| xargs -I{{}} {self._docker_bin} start {{}}"
         self.try_executing_and_verbosely_log_error(cmd)
 
+    def run_container_till_complete(self, servce_name, timeout=60):
+        cmd = self._container_by_name_cmd(servce_name) + f"| xargs -I{{}} {self._docker_bin} start -a {{}}"
+        return self._ssh_direct.execute(cmd, timeout=timeout)
+
     def run_cmd_in_service(self, service_name, cmd):
         cmd_escaped = cmd.replace("'", "\\'")
         cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._docker_bin} exec {{}} sh -c $'{cmd_escaped}'"
@@ -319,5 +323,9 @@ class Docker(object):
 
     def image_fqdn(self, container_id):
         return self.inspect(container_id)['Config']['Image']
+
+    def change_restart_policy(self, container_id, policy):
+        cmd = f"{self._docker_bin} update {container_id} --restart={policy}"
+        self._ssh_direct.execute(cmd)
 
 plugins.register("Docker", Docker)
