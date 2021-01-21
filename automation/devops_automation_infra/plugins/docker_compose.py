@@ -105,6 +105,16 @@ class DockerCompose(object):
         cmd = f"{self.compose_bin_path} -f {compose_file_path} up --no-start --no-deps"
         self._ssh_direct.execute(cmd)
 
+    def run_foreground(self, compose_file_path, *services):
+        services_to_refresh = " ".join([service for service in services])
+        cmd = f"{self.compose_bin_path} -f {compose_file_path} up --no-deps --no-recreate --no-color {services_to_refresh}"
+        self._ssh_direct.execute(cmd)
+
+    def restart_services(self, compose_file_path, *services):
+        services_to_refresh = " ".join([service for service in services])
+        cmd = f"{self.compose_bin_path} -f {compose_file_path} restart {services_to_refresh}"
+        self._ssh_direct.execute(cmd)
+
     def services(self, compose_file_path):
         cmd = f"docker-compose -f {compose_file_path} config  --services"
         return self._ssh_direct.execute(cmd).strip().split('\n')
