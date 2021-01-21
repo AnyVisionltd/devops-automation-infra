@@ -89,7 +89,7 @@ class DockerCompose(object):
         # If restart policy is not defined lets try to figure it out
         if restart_policy is None:
             docker_id = self.service_docker_id(compose_file_path, service_name)
-            restart_policy = self._host.Docker.image_inspect(docker_id)['HostConfig']['RestartPolicy']['Name']
+            restart_policy = self._host.Docker.inspect(docker_id)['HostConfig']['RestartPolicy']['Name']
         self.purge_service(compose_file_path, service_name)
         self.run_sevice_with_environment(compose_file_path, service_name, environment_variables, doker_name=doker_name, restart_policy=restart_policy)
 
