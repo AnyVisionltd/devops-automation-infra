@@ -57,7 +57,7 @@ class DockerCompose(object):
         if compose_workdir is None:
             # This feature is only enabled since 1.25.2 (Jan 2020)
             if self.version < packaging.version.Version("1.25.2"):
-                logging.error("Compose version is outdated!!!! update docker-compose")
+                raise Exception("Compose version is outdated!!!! update docker-compose")
             raise Exception(f"service {container_id} not created by compose")
 
         # Now depends where compose was started the "compose filename" can be not relative to workdir
