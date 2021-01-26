@@ -74,6 +74,10 @@ class ProxyContainer(object):
             if "endpoint with name automation_proxy already exists in network host" in e.stderr:
                 ssh_direct.execute(f"{self._docker_bin_path} network disconnect --force host automation_proxy")
                 ssh_direct.execute(run_cmd)
+            if f"manifest for gcr.io/anyvision-training/automation-proxy:{self._automation_proxy_version()} not found" in e.stderr:
+                logging.error(f"tag {self._automation_proxy_version()} was not pushed to gcr, "
+                              f"please run make push-automation-proxy from devops-infra repo")
+                raise e
             else:
                 raise e
         logging.debug("docker is running")
