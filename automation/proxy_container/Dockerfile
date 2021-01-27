@@ -21,6 +21,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     rsync \
     pigz \
     zip \
+    less \
     && curl -sL https://deb.nodesource.com/setup_10.x | bash \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
