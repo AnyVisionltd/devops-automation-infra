@@ -12,6 +12,8 @@ from devops_automation_infra.utils.host import get_host_ip
 import json
 import os
 import ast
+import re
+
 
 class Docker(object):
 
@@ -47,10 +49,32 @@ class Docker(object):
     def _container_ip_address_cmd(self):
         return f'{self._docker_bin} inspect -f "{{{{range .NetworkSettings.Networks}}}}{{{{.IPAddress}}}}{{{{end}}}}"'
 
+    def _handle_docker_start_failure(self, service_name, exception_error):
+        # In case we have the "bind: address already in use" problem it might be an issue with
+        # someone else taking the port or it might be a race with docker itself
+        if not "bind: address already in use" in exception_error.stderr:
+            raise
+        match = re.search(".*userland proxy:.*:(\d+).*", exception_error.stderr)
+        if match:
+            try:
+                port = match.group(1)
+                cmd = f"sudo netstat -neap | grep {port}"
+                logging.debug(f"{cmd} - {self._ssh_direct.execute(cmd)}")
+            except:
+                pass
+        logging.info(f"Failed to restart container {service_name} trying stop start", exc_info=True)
+        if self._host.Docker.is_container_up(service_name):
+            self.stop_container(service_name)
+        time.sleep(1)
+        self.start_container(service_name)
+
     def restart_container_by_service_name(self, service_name):
         logging.debug(f"restarting container {service_name}")
         cmd = self._container_by_name_cmd(service_name) + f"| xargs --no-run-if-empty {self._docker_bin} restart"
-        self.try_executing_and_verbosely_log_error(cmd)
+        try:
+            self.try_executing_and_verbosely_log_error(cmd)
+        except SSHCalledProcessError as e:
+            self._handle_docker_start_failure(service_name, e)
 
     def kill_container_by_service(self, service_name, signal='KILL'):
         logging.debug(f"Kill container {service_name}")
