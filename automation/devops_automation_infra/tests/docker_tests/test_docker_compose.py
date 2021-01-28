@@ -5,7 +5,7 @@ from devops_automation_infra.plugins import docker_compose
 from pytest_automation_infra.helpers import hardware_config
 
 DUMMY_COMPOSE_FILE = """
-version: "3.9"
+version: "3.3"
 services:
   sasha-compose-test:
     image: "hello-world:latest"
