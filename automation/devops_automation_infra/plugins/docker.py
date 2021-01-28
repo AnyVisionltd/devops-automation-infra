@@ -22,7 +22,9 @@ class Docker(object):
         self._host = host
         self._ssh_direct = self._host.SshDirect
         self._docker_bin = self._docker_bin_path()
+        self._logged_in = False
 
+    
     @property
     def bin_path(self):
         return self._docker_bin
@@ -70,6 +72,9 @@ class Docker(object):
         self.start_container(service_name)
 
     def login(self):
+        if self._logged_in:
+            return
+        start = time.time()
         connected_ssh_module = self._ssh_direct
         logging.debug("doing docker login")
         # host_running_test_ip = get_host_running_test_ip()
@@ -80,6 +85,9 @@ class Docker(object):
             connected_ssh_module.execute(f"mkdir -p {remote_home}/.docker")
             connected_ssh_module.put(docker_login_host_path, f"{remote_home}/.docker/")
         connected_ssh_module.execute("docker login https://gcr.io")
+        self._logged_in = True
+        logging.debug(f"docker login time {time.time() - start}")
+
 
     def restart_container_by_service_name(self, service_name):
         logging.debug(f"restarting container {service_name}")
