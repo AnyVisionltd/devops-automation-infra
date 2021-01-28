@@ -27,6 +27,7 @@ def pytest_after_base_config(base_config, request):
     request.config.hook.pytest_after_proxy_container(base_config=base_config, request=request)
 
 
+@pytest.hookimpl(tryfirst=True)
 def pytest_clean_between_tests(host, item):
     logging.info("running devops clean_between_tests")
     host.TunnelManager.clear()
