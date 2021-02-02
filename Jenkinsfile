@@ -51,7 +51,7 @@ pipeline {
             steps {
                 dir ('automation-infra'){
                     sh (
-                        script: "./run/env_vars.sh -p devops_product_manager ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --log-cli-level info"
+                        script: "./run/env_vars.sh --install ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --num-parallel 5"
                     )
                 }
             }
