@@ -7,6 +7,7 @@ from devops_automation_infra.plugins.memsql import Memsql
 @hardware_config(hardware={"host": {'gpu' :1}})
 def test_basic(base_config):
     memsql = base_config.hosts.host.Memsql
+    memsql.start_service()
     memsql.verify_functionality()
     logging.info("functioning. resetting state..")
     memsql.reset_state()
