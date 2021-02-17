@@ -42,16 +42,16 @@ pipeline {
         }
         stage ('Build automation proxy container') {
             steps{
-                dir ('automation-infra'){
+                dir ('devops-automation-infra'){
                     sh(script: "make push-automation-proxy")
                 }
             }
         }
         stage('Run integration tests') {
             steps {
-                dir ('automation-infra'){
+                dir ('devops-automation-infra'){
                     sh (
-                        script: "./run/env_vars.sh --install ../devops-automation-infra/automation/devops_automation_infra/tests/docker_tests/ --num-parallel 5"
+                        script: "./run/env_vars.sh --install automation/devops_automation_infra/tests/docker_tests/ --num-parallel 5"
                     )
                 }
             }
