@@ -85,7 +85,12 @@ class DockerCompose(object):
         command = command or ""
         cmd = f"{self.compose_bin_path} -f {compose_file_path} run --no-deps --use-aliases {ports_command} -d {name_cmd} {env_pairs} {service_name} {command}"
         container_name = self._ssh_direct.execute(cmd).strip()
-        self._host.Docker.change_restart_policy(container_name, policy=restart_policy)
+        try:
+            self._host.Docker.change_restart_policy(container_name, policy=restart_policy)
+        except SSHCalledProcessError as e:
+            if not "cannot update a stopped container" in e.stderr:
+                raise
+            logging.debug("Skip restart policy update container is already dead")
 
     def service_image_fqdn(self, compose_file_path, service_name):
         cmd = f"{self.compose_bin_path} -f {compose_file_path} images -- {service_name} | tail -n -1"
