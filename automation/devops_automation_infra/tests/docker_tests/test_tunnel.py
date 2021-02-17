@@ -1,4 +1,7 @@
 import logging
+
+import pytest
+
 from pytest_automation_infra.helpers import hardware_config
 import paramiko
 import requests
@@ -11,6 +14,7 @@ def test_tunnel(base_config):
     logging.info(f"tunnel up on: {consul_tunnel.host_port}")
 
 
+@pytest.mark.xfail(run=False)
 @hardware_config(hardware={"host": {}})
 def test_tunnel_ssh(base_config):
     host = base_config.hosts.host
