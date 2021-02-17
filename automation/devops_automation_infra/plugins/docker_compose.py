@@ -6,7 +6,7 @@ from infra.model import plugins
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from pytest_automation_infra.helpers import hardware_config
 import packaging.version
-
+from retry import retry
 
 class DockerCompose(object):
 
@@ -29,6 +29,7 @@ class DockerCompose(object):
         logging.debug(f"stopping compose {compose_file_path}")
         self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} down', timeout=60 * 20)
 
+    @retry(tries=5, delay=30, backoff=2)
     def compose_pull(self, compose_file_path):
         logging.debug(f"pulling docker images from compose {compose_file_path}")
         self._ssh_direct.execute(f'{self.compose_bin_path} -f {compose_file_path} pull -q', timeout=60 * 60)
