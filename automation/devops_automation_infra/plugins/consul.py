@@ -16,12 +16,8 @@ class Consul(object):
         self.OVERRIDE_KEY = "OVERRIDE"
         self.APPLICATION_KEY = "APPLICATION"
 
-    @property
-    def tunnel(self):
-        return self._host.TunnelManager.get_or_create('consul', self.DNS_NAME, self.PORT)
-
     def create_client(self):
-        return consul.Consul(*self.tunnel.host_port)
+        return consul.Consul(self._host.ip, self.PORT)
 
     @property
     def _consul(self):
