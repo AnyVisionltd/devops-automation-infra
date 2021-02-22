@@ -4,6 +4,7 @@ import time
 import yaml
 
 from devops_automation_infra.k8s_plugins.gravity import Gravity
+from devops_automation_infra.k8s_plugins.kubectl import Kubectl
 from pytest_automation_infra.helpers import hardware_config
 
 
@@ -24,9 +25,9 @@ def test_kubectl(base_config):
     cluster = base_config.clusters.cluster1
     import pdb; pdb.set_trace()
 
-    cluster.Gravity._open_communication()
-    password = cluster.Gravity._get_secret()
+    cluster.Kubectl.verify_functionality()
+    # password = cluster.Gravity._get_secret()
 
-    subprocess.run(f"sshpass -p {password} tsh login --proxy {host.ip}:32009 --user admin --insecure")
+    # subprocess.run(f"sshpass -p {password} tsh login --proxy {host.ip}:32009 --user admin --insecure")
 
 
