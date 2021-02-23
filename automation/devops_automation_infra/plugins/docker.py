@@ -211,7 +211,7 @@ class Docker(object):
         cmd = f"{self._docker_bin} rm -f {' '.join(container_names)}"
         self.try_executing_and_verbosely_log_error(cmd, timeout=100)
 
-    def run_container_by_service_with_env(self, service_name, envs={}, remove_container_after_execute=False,
+    def run_container_by_service_with_env(self, service_name, envs={}, remove_container_after_execute=False,snippet_of_commands="",
                                           is_detach_mode=True, **kwargs):
         container_name = self.container_by_name(service_name)
         container_id = self.container_ids_by_name(container_name)
@@ -226,6 +226,8 @@ class Docker(object):
             docker_args += f' -v {volume["Source"]}:{volume["Destination"]}'
         if remove_container_after_execute:
             docker_args += " --rm "
+        if snippet_of_commands:
+            docker_args += f" {snippet_of_commands} "
         network = self._first_network_by_name(service_name)
         image_name = self._first_image_by_name(service_name)
         if is_detach_mode:
