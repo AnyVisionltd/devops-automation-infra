@@ -18,7 +18,7 @@ class Kubectl:
         tunnel = self._master.TunnelManager.get_or_create('kubectl', svc_ip, svc_port, ssh.get_transport())
         return tunnel
 
-    def _config(self, **kwargs):
+    def _create_config(self, **kwargs):
         ssh = self._master.SshDirect
         api_token = kwargs.pop("api_token",
                                ssh.execute('''kubectl get secrets -n kube-system -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='default')].data.token}"|base64 --decode'''))
@@ -32,23 +32,16 @@ class Kubectl:
             setattr(config, k, v)
         return config
 
-    def _client(self, configuration):
-        return ApiClient(configuration)
-
-    def _api(self, client):
-        return kubernetes.client.CoreV1Api(client)
-
-    def api(self, **kwargs):
-        config = self._config(**kwargs)
-        client = self._client(config)
-        api = self._api(client)
-        return api
+    def client(self, **kwargs):
+        config = self._create_config(**kwargs)
+        return ApiClient(config)
 
     def verify_functionality(self):
-        api = self.api()
+        api = kubernetes.client.CoreV1Api(self.client())
         res = api.list_pod_for_all_namespaces(watch=False)
         for i in res.items:
             print("%s\t%s\t%s" % (i.status.pod_ip, i.metadata.namespace, i.metadata.name))
 
 
 cluster_plugins.register('Kubectl', Kubectl)
+
