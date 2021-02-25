@@ -32,12 +32,20 @@ class TunnelManager(object):
         tunnel.start()
         self.tunnels[service_name] = tunnel
 
-    def clear(self):
+    def clear(self, all=True):
         if not self.tunnels:
             return
-        jobs = {tunnel.local_endpoint : (self._do_stop, tunnel) for tunnel in self.tunnels.values()}
+
+        if all:
+            jobs = {tunnel.service_name: (self._do_stop, tunnel) for name, tunnel in self.tunnels.items()}
+        else:
+            jobs = {tunnel.service_name: (self._do_stop, tunnel) for name, tunnel in self.tunnels.items()
+                    if tunnel.transport != self._host.SshDirect.get_transport()}
+        if not jobs:
+            return
         concurrently.run(jobs)
-        self.tunnels.clear()
+        for service_name in jobs.keys():
+            del self.tunnels[service_name]
 
 
 plugins.register("TunnelManager", TunnelManager)

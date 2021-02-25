@@ -1,5 +1,8 @@
+import base64
+
 import kubernetes
 from kubernetes.client import ApiClient
+from kubernetes.stream import stream
 
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from infra.model import cluster_plugins
@@ -21,7 +24,7 @@ class Kubectl:
     def _create_config(self, **kwargs):
         ssh = self._master.SshDirect
         api_token = kwargs.pop("api_token",
-                               ssh.execute('''kubectl get secrets -n kube-system -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='default')].data.token}"|base64 --decode'''))
+                               ssh.execute('''kubectl get secrets -n kube-system -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\\.io/service-account\\.name']=='default')].data.token}"|base64 --decode'''))
         tunnel = self._tunnel
         config = kubernetes.client.Configuration()
         config.host = f"https://{tunnel.local_endpoint}"
@@ -35,6 +38,27 @@ class Kubectl:
     def client(self, **kwargs):
         config = self._create_config(**kwargs)
         return ApiClient(config)
+
+    def v1api(self):
+        return kubernetes.client.CoreV1Api(self.client())
+
+    def get_secret_data(self, namespace, name, path, decode=True):
+        secret_list = self.v1api().list_namespaced_secret(namespace)
+        for secret in secret_list.items:
+            if secret.metadata.name == name:
+                return base64.b64decode(secret.data[path]) if decode else secret.data[path]
+
+    def get_pod_name(self, namespace, label):
+        pod_list = self.v1api().list_namespaced_pod(namespace=namespace)
+        for pod in pod_list.items:
+            if pod.metadata.labels[label["key"]] == label["value"]:
+                return pod.metadata.name
+
+    def pod_exec(self, namespace, name, command, executable="/bin/bash"):
+        response = stream(self.v1api().connect_get_namespaced_pod_exec,
+                      name, namespace, command=[executable, "-c"] + command.split(),
+                      stderr=True, stdin=False, stdout=True, tty=False)
+        return response
 
     def verify_functionality(self):
         api = kubernetes.client.CoreV1Api(self.client())

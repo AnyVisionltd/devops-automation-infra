@@ -38,5 +38,8 @@ class Gravity:
             term.write(password.encode())
         # self._master.SshDirect.execute("gravity exec kubectl tsh login {username} {password from get_secret}")
 
+    def exec(self, command):
+        return self._master.SshDirect.execute(f"sudo gravity exec {command}")
+
 
 cluster_plugins.register('Gravity', Gravity)

@@ -36,8 +36,12 @@ class ProxyDaemonSet(object):
 
     @_memoize
     def _automation_proxy_version(self):
+        ds_version = os.environ.get("PROXY_DAEMONSET_VERSION", "")
+        if ds_version:
+            return ds_version
         version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../proxy_container/version.sh")
         return subprocess.check_output([version_file]).split()[0].decode()
+
 
     @property
     def running(self): # TODO: Maybe in future verify pod is not running via SSHDirect
