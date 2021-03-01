@@ -11,3 +11,5 @@ python-consul
 kafka-python==2.0.1
 munch==2.5.0
 pyzmq==19.0.1
+paho-mqtt==1.5.1
+schedule==1.0.0
