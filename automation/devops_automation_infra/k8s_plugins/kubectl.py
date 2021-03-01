@@ -42,24 +42,6 @@ class Kubectl:
     def v1api(self):
         return kubernetes.client.CoreV1Api(self.client())
 
-    def get_secret_data(self, namespace, name, path, decode=True):
-        secret_list = self.v1api().list_namespaced_secret(namespace)
-        for secret in secret_list.items:
-            if secret.metadata.name == name:
-                return base64.b64decode(secret.data[path]) if decode else secret.data[path]
-
-    def get_pod_name(self, namespace, label):
-        pod_list = self.v1api().list_namespaced_pod(namespace=namespace)
-        for pod in pod_list.items:
-            if pod.metadata.labels[label["key"]] == label["value"]:
-                return pod.metadata.name
-
-    def pod_exec(self, namespace, name, command, executable="/bin/bash"):
-        response = stream(self.v1api().connect_get_namespaced_pod_exec,
-                      name, namespace, command=[executable, "-c"] + command.split(),
-                      stderr=True, stdin=False, stdout=True, tty=False)
-        return response
-
     def verify_functionality(self):
         api = kubernetes.client.CoreV1Api(self.client())
         res = api.list_pod_for_all_namespaces(watch=False)
