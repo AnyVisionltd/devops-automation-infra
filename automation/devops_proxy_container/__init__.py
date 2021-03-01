@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from automation_infra.utils import waiter
+from automation_infra.utils import waiter, concurrently
 from devops_automation_infra.plugins.proxy_container import ProxyContainer
 from devops_automation_infra.plugins.ssh import SSH
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
@@ -28,7 +28,11 @@ def pytest_after_base_config(base_config, request):
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_clean_between_tests(host, item):
+def pytest_clean_between_tests(base_config, item):
+    concurrently.run([(clean, host, item) for _, host in base_config.hosts])
+
+
+def clean(host, item):
     logging.info("running devops clean_between_tests")
     host.TunnelManager.clear()
     host.ProxyContainer.restart()

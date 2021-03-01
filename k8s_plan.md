@@ -116,3 +116,18 @@ To init Gravity plugin:
         + this command creates ~/.kube/config file (or any other saved path and then specify location with --kubeconfig flag )
 + Once we did the gravity init plugin, we can create the kubectl because we have the kubeconfig file.
 
+
+### v3 run tests command:
+./containerize.sh python -m pytest -p pytest_subprocessor --sf=\"-p pytest_automation_infra -p pytest_devops_infra --install\" -s 
+automation/devops_automation_infra/tests/test_temp.py
+
+QUESTIONS:
++ do we feel comfortable leaving existing tests and conftests to function as they do? (devops and core tests?)
++ the pytest_devops_infra plugin will be in addition to the existing plugins and can be invoked instead of some of them in the use-case where we want to differentiate installation between hosts..
++ 
+
+installers:
++ devops_docker - will setup proxy container, with --install flag will pull and up devops_docker_compose.yaml
++ core_docker - will setup proxy container, with --install flag will 
++ devops_k8s
++ core_k8s

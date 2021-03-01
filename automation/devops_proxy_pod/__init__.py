@@ -38,7 +38,11 @@ def pytest_clean_base_btwn_tests(base_config, item):
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_clean_between_tests(host, item):
+def pytest_clean_between_tests(base_config, item):
+    concurrently.run([(clean, host, item) for _, host in base_config.hosts])
+
+
+def clean(host, item):
     logging.info("running devops clean_between_tests")
     host.TunnelManager.clear()
 

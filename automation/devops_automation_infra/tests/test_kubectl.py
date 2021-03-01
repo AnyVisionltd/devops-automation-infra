@@ -26,3 +26,25 @@ def test_kubectl(base_config):
     logging.info(base_config.clusters.cluster1.ProxyDaemonSet)
 
 
+@hardware_config(hardware={"host": {"installer": "docker"},
+                           "host2": {},
+                           "host3": {}},
+                 grouping={"cluster1": {"hosts": ["host2", "host3"], "installer": "k8s"}},
+                 )
+def test_ssh2(base_config):
+    pass
+    """
+    
+    + pass over hardware_reqs and figure out each type of installer: which hosts need which type of installer 
+    + 
+    
+    
+    + figure out if exists host level setup
+        + for host in hosts: call host.installer.setup()
+    + figure out if exists cluster level setup
+        + for cluster in clusters: call cluster.installer.setup()
+    
+    + for install/clean/download_logs/after steps - do the same thing as in setup step.
+    
+    
+    """

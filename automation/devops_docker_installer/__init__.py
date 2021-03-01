@@ -1,12 +1,18 @@
 import logging
 import os
+import re
+
 import pytest
 
+import devops_docker_installer
 from compose_util import compose_options
 from compose_util.compose_manager import ComposeManager
 from automation_infra.utils import waiter
 from pytest_automation_infra import helpers
 
+from devops_automation_infra.plugins.proxy_container import ProxyContainer
+from devops_automation_infra.plugins.ssh import SSH
+from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 
 from automation_infra.plugins.admin import Admin
 from devops_automation_infra.plugins.memsql import Memsql

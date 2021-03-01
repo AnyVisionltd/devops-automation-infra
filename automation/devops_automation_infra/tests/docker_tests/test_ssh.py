@@ -56,7 +56,7 @@ def _test_rsync_ssh(host, host_ssh):
     assert set(files) == set([f'{sync_dir}/rsync/1/file', f'{sync_dir}/rsync/2/file'])
 
 
-
+installer = "docker"
 @hardware_config(hardware={"host": {}})
 def test_ssh(base_config):
     logging.info(f"PID of test_Ssh: {os.getpid()}")
