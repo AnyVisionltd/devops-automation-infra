@@ -17,6 +17,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
     libxext6 \
     libxrender-dev \
     python3-pip \
+    python3-setuptools \
     iproute2 \
     rsync \
     pigz \
