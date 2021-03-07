@@ -2,6 +2,7 @@ import kubernetes
 from kubernetes.client import ApiClient
 
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
+from devops_automation_infra.k8s_plugins.k8s_master import K8SMaster
 from infra.model import cluster_plugins
 
 
