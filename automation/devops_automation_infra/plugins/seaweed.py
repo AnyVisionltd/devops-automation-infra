@@ -76,8 +76,8 @@ class Seaweed(ResourceManager):
             "tr -d '>'",
             "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
-            "xargs -I{} echo 's3.bucket.delete' -name={}",
-            weed_shell
+            "xargs -I{} echo 's3.bucket.delete' -name={} | weed shell",
+            "ehco 'done'"
         ])
 
         weed_delete_cmd = "; ".join([
