@@ -5,6 +5,13 @@ import logging
 from kubernetes.client import ApiException
 import kubernetes
 
+
+def get_pods_by_label(kubectl_client, label, namespace='default'):
+    v1 = kubernetes.client.CoreV1Api(kubectl_client)
+    pods = v1.list_namespaced_pod(namespace=namespace, label_selector=label)
+    return pods.items
+
+
 def create_generic_secret(client, name, data, namepace='default', type='Opaque'):
     v1 = kubernetes.client.CoreV1Api(client)
     sec = kubernetes.client.V1Secret()

@@ -2,12 +2,11 @@ import logging
 import os
 import yaml
 import subprocess
-
 from kubernetes.client import ApiException
 
 from automation_infra.utils import waiter
-from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from infra.model import cluster_plugins
+
 import kubernetes
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
