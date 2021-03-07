@@ -76,7 +76,7 @@ class Seaweed(ResourceManager):
             "tr -d '>'",
             "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
-            "xargs -I{} echo -e 'lock\\ns3.bucket.delete -name={}\\nunlock\\n'",
+            "xargs -I{} echo 'lock; s3.bucket.delete -name={}; unlock'",
             weed_shell
         ])
        
