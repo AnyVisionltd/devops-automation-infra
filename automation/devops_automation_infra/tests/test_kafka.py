@@ -1,10 +1,5 @@
-import logging
-
-from devops_automation_infra.k8s_plugins.gravity import Gravity
-from devops_automation_infra.k8s_plugins.kafka import Kafka
-from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from pytest_automation_infra.helpers import hardware_config
-
+from devops_automation_infra.k8s_plugins.kafka import Kafka
 
 @hardware_config(hardware={"host1": {"hardware_type": "ai_camera", },
                            "host2": {"hardware_type": "vm", "base_image": "k8s_base", "installer": "k8s"},
@@ -19,8 +14,8 @@ def example_decorator():
                  grouping={"cluster1": {"hosts": ["host1"]}})
 def test_kafka(base_config):
     host = base_config.hosts.host1
-    ssh = host.SshDirect
     cluster = base_config.clusters.cluster1
-    base_config.clusters.cluster1.Kafka.ping()
+    cluster.Kafka.ping()
+
 
 
