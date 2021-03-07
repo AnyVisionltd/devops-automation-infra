@@ -8,7 +8,7 @@ def add_cmdline_options(parser):
     parser.addoption("--services", action="store", default="",
                      help="Services to change image. sperate with comma eg. pipeng,camera-service")
     parser.addoption("--tag", action="store", default="", help="image tag to use in spesified services")
-    parser.addoption("--yaml-file", action="store", default="docker-compose-devops.yml",
+    parser.addoption("--yaml-file", action="store", default="docker-compose-core-gpu.yml",
                      help="yaml file to pull and up")
     parser.addoption("--sync-time", type=bool, default=False,
                      help="sync time between host running test to remote running tests")
