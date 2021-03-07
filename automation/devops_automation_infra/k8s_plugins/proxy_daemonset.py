@@ -34,7 +34,7 @@ class ProxyDaemonSet(object):
 
     def __init__(self, cluster):
         self._cluster = cluster
-        self.ds_name = 'automation-proxy-daemonset'
+        self.daemon_set_name = 'automation-proxy-daemonset'
         self._k8s_client = None
 
     @_memoize
@@ -45,7 +45,7 @@ class ProxyDaemonSet(object):
     @property
     def running(self): # TODO: Maybe in future verify pod is not running via SSHDirect
         try:
-            self._k8s_v1_client.read_namespaced_daemon_set(name=self.ds_name, namespace='default')
+            self._k8s_v1_client.read_namespaced_daemon_set(name=self.daemon_set_name, namespace='default')
         except ApiException as e:
             if e.status == 404:
                 return False
@@ -78,7 +78,7 @@ class ProxyDaemonSet(object):
             return
         logging.debug("trying to remove automation-proxy daemonset")
         try:
-            self._k8s_v1_client.delete_namespaced_daemon_set(name=self.ds_name, namespace='default')
+            self._k8s_v1_client.delete_namespaced_daemon_set(name=self.daemon_set_name, namespace='default')
         except ApiException as e:
             logging.exception("Exception when calling AppsV1Api->create_namespaced_daemon_set: %s\n" % e)
         waiter.wait_for_predicate(lambda: not self.running)
@@ -90,7 +90,7 @@ class ProxyDaemonSet(object):
         self.run()
 
     def _num_ready_pods(self):
-        return self._k8s_v1_client.read_namespaced_daemon_set(name=self.ds_name, namespace="default").status.number_ready
+        return self._k8s_v1_client.read_namespaced_daemon_set(name=self.daemon_set_name, namespace="default").status.number_ready
 
 
 cluster_plugins.register("ProxyDaemonSet", ProxyDaemonSet)
