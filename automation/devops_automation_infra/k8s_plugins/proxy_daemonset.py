@@ -1,5 +1,6 @@
 import logging
-import os, yaml
+import os
+import yaml
 import subprocess
 
 from kubernetes.client import ApiException
@@ -8,7 +9,9 @@ from automation_infra.utils import waiter
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from infra.model import cluster_plugins
 import kubernetes
+from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
+from devops_automation_infra.utils import kubectl
 
 
 def _memoize(function):
@@ -57,6 +60,7 @@ class ProxyDaemonSet(object):
     def run(self):
         self.kill()
         logging.debug("Deploying automation-proxy DaemonSet")
+        kubectl.create_image_pull_secret(self._cluster.Kubectl.client())
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../proxy_container/daemonset.yaml")) as f:
             ds_yaml = yaml.safe_load(f)
         ds_yaml['spec']['template']['spec']['containers'][0]['image'] = f'gcr.io/anyvision-training/automation-proxy:{self._automation_proxy_version()}'
