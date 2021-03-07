@@ -76,7 +76,7 @@ class Seaweed(ResourceManager):
             "tr -d '>'",
             "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
-            "sed 's|^|lock; bucket.delete -name=|'",
+            "sed 's|^|lock; s3.bucket.delete -name=|'",
             "tr '\\n' ';'",
             "sed 's|$|unlock|'",
             weed_shell
