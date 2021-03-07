@@ -51,7 +51,7 @@ pipeline {
             steps {
                 dir ('devops-automation-infra'){
                     sh (
-                        script: "./run/env_vars.sh --install automation/devops_automation_infra/tests/v3_tests/devops_docker/ automation/devops_automation_infra/tests/v3_tests/docker/ --num-parallel 5"
+                        script: "./run/env_vars.sh --install automation/devops_automation_infra/tests/docker_tests/ --num-parallel 5"
                     )
                 }
             }

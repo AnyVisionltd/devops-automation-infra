@@ -3,14 +3,7 @@ import os
 import time
 import io
 
-from automation_infra.plugins.ssh_direct import SshDirect
-# from devops_automation_infra.installers import docker
-from devops_automation_infra.plugins.ssh import SSH
-
 from pytest_automation_infra.helpers import hardware_config
-
-installer = 'devops_docker'
-
 
 def _test_fileobj_upload(host):
     string_obj = io.StringIO("sasha king")
