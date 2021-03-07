@@ -76,16 +76,10 @@ class Seaweed(ResourceManager):
             "tr -d '>'",
             "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
-            "xargs -I{} echo 's3.bucket.delete' -name={} | weed shell",
-            "ehco 'done'"
+            "xargs -I{} echo -e 'lock\n;s3.bucket.delete' -name={};\nunlock\n'",
+            weed_shell
         ])
-
-        weed_delete_cmd = "; ".join([
-            weed_cmd("lock"),
-            weed_delete_cmd,
-            weed_cmd("unlock")
-        ])
-        
+       
         logging.info(f"weed_delete_cmd: {weed_delete_cmd}")
         self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
 
