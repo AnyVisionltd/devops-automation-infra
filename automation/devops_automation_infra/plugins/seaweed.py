@@ -76,10 +76,15 @@ class Seaweed(ResourceManager):
             "tr -d '>'",
             "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
-            "sed 's|^|lock; s3.bucket.delete -name=|'",
+            "sed 's|^|s3.bucket.delete -name=|'",
             "tr '\\n' ';'",
-            "sed 's|$|unlock|'",
             weed_shell
+        ])
+        
+        weed_delete_cmd = "; ".join([
+            weed_cmd("lock"),
+            weed_delete_cmd,
+            weed_cmd("unlock")
         ])
        
         logging.info(f"weed_delete_cmd: {weed_delete_cmd}")
