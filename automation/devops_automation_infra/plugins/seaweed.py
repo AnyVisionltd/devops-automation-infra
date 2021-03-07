@@ -72,8 +72,8 @@ class Seaweed(ResourceManager):
 
         weed_delete_cmd = " | ".join([
             weed_cmd("s3.bucket.list"),
-            "grep -Eo '\\S+$'",
-            "sed 's|^|s3.bucket.delete -name |'",
+            "sed 's/^ *//'",
+            "sed 's|^|s3.bucket.delete -name=|'",
             "tr '\\n' ';'",
             weed_shell
         ])
