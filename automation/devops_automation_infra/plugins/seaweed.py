@@ -72,11 +72,12 @@ class Seaweed(ResourceManager):
 
         weed_delete_cmd = " | ".join([
             weed_cmd("s3.bucket.list"),
-            "grep -v 'seaweedfs-master:9333' | tr -d '>'",
+            "grep -v 'seaweedfs-master:9333'",
+            "tr -d '>'",
+            "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
-            "sed 's|^|s3.bucket.delete -name=|'",
-            "tr '\\n' ';'",
-            weed_shell
+            "xargs -I{} echo 's3.bucket.delete' -name={}",
+            "weed shell"
         ])
 
         weed_delete_cmd = "; ".join([
