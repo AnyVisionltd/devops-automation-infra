@@ -77,7 +77,7 @@ class Seaweed(ResourceManager):
             "sed '/^[[:space:]]*$/d'",
             "sed 's/^ *//'",
             "xargs -I{} echo 's3.bucket.delete' -name={}",
-            "weed shell"
+            weed_shell
         ])
 
         weed_delete_cmd = "; ".join([
@@ -86,7 +86,7 @@ class Seaweed(ResourceManager):
             weed_cmd("unlock")
         ])
         
-        logging.debug(f"weed_delete_cmd: {weed_delete_cmd}")
+        logging.info(f"weed_delete_cmd: {weed_delete_cmd}")
         self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
 
     def verify_functionality(self):
