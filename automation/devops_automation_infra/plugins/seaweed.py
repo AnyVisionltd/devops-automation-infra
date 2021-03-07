@@ -65,7 +65,7 @@ class Seaweed(ResourceManager):
                     self.delete_bucket(bucket.name)
 
     def clear_buckets(self):
-        weed_shell = "weed shell -filer seaweedfs-filer:8888"
+        weed_shell = "weed shell"
 
         def weed_cmd(cmd):
             return " | ".join([f"echo {cmd}", weed_shell])
