@@ -65,10 +65,10 @@ class Seaweed(ResourceManager):
                     self.delete_bucket(bucket.name)
 
     def clear_buckets(self):
-        weed_shell = "weed shell "
+        weed_shell = "weed shell"
 
         def weed_cmd(cmd):
-            return " | ".join([f"echo {cmd}", weed_shell])
+            return " | ".join([f"echo '{cmd}'", weed_shell])
 
         weed_delete_cmd = " | ".join([
             weed_cmd("s3.bucket.list"),
