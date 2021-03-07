@@ -1,0 +1,46 @@
+# This isnt currently active, we are running a docker pod for ssh connectivity.
+# But maybe in the future we will want to replace it with a daemonset pod.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: automation-proxy-daemonset
+  namespace: default
+  labels:
+    k8s-app: ssh
+spec:
+  selector:
+    matchLabels:
+      name: automation-proxy
+  template:
+    metadata:
+      labels:
+        name: automation-proxy
+    spec:
+      imagePullSecrets:
+        - name: imagepullsecret
+      containers:
+      - name: automation-proxy
+        image: orihab/ubuntu_ssh:latest
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: journal-logs
+          mountPath: /var/log/journal
+        - name: app-logs
+          mountPath: /storage/logs
+      tolerations:
+      - operator: Exists # matches all keys, values and effects which means this will tolerate everything
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: journal-logs
+        hostPath:
+          path: /var/log/journal
+      - name: app-logs
+        hostPath:
+          path: /storage/logs
