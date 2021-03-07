@@ -78,12 +78,12 @@ class Seaweed(ResourceManager):
             "sed 's/^ *//'",
             "sed 's|^|s3.bucket.delete -name=|'",
             "tr '\\n' ';'",
-            "(echo 'lock'; cat -; echo 'unlock')",
+            "(echo 'lock;'; cat -; echo ''; echo 'unlock;')",
             weed_shell
         ])
         
         logging.info(f"weed_delete_cmd: {weed_delete_cmd}")
-        self._host.Docker.run_cmd_in_service('_seaweedfs-master_', weed_delete_cmd)
+        self._host.Docker.run_cmd_in_service('seaweedfs-master_', weed_delete_cmd)
 
     def verify_functionality(self):
         try:
