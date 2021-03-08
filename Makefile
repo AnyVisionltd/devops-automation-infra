@@ -8,18 +8,19 @@ push-automation-proxy: build-automation-proxy
 	docker push gcr.io/anyvision-training/automation-proxy:${AUTOMATION_PROXY_VERSION}
 
 test-ssh-local:
-	./run/local.sh $(args) automation/devops_automation_infra/tests/docker_tests/test_ssh.py
+	./run/local.sh automation/devops_automation_infra/tests/v3_tests/docker/test_ssh.py
 
-test-all-local:
-	./run/local.sh $(args) automation/devops_automation_infra/tests/docker_tests/
+test-docker-local:
+	./run/local.sh automation/devops_automation_infra/tests/v3_tests/docker/
+	./run/local.sh $(args) automation/devops_automation_infra/tests/v3_tests/devops_docker/
 
 test-ssh-aws:
-	./run/aws.sh $(args) automation/devops_automation_infra/tests/docker_tests/test_ssh.py
+	./run/aws.sh automation/devops_automation_infra/tests/v3_tests/docker/test_ssh.py
 
-test-all-aws:
-	./run/aws.sh $(args) automation/devops_automation_infra/tests/docker_tests/ $(parallel)
+test-docker-aws:
+	./run/aws.sh $(args) automation/devops_automation_infra/tests/v3_tests/docker_tests/ $(parallel)
 
 test-sanity:
-	make test-all-local args="--install"
-	make test-all-aws args="--install" parallel="--num-parallel 3"
+	make test-docker-local args="--install"
+	make test-docker-aws args="--install" parallel="--num-parallel 3"
 
