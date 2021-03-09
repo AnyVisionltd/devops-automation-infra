@@ -20,7 +20,8 @@ def check_environment():
         "Please download certificates from https://anyvision.atlassian.net/wiki/spaces/PROD/pages/2266464264/Run+test+with+cloud+provisioner"
 
     aws_dir = Path.joinpath(Path.home(), '.aws')
-    assert Path.exists(aws_dir) and {f.name for f in aws_dir.glob('*')} == {'config', 'credentials'}, \
+    
+    assert Path.exists(aws_dir) and {'config', 'credentials'}.issubset({f.name for f in aws_dir.glob('*')}), \
         f"aws credentials dont exist in {Path.home()}.aws directory. Please get config and credential files"
 
     if not Path.exists(Path.joinpath(Path.home(), '.ssh', 'anyvision-devops.pem')):
