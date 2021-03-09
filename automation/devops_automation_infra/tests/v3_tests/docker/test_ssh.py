@@ -6,6 +6,7 @@ import io
 from automation_infra.plugins.ssh_direct import SshDirect
 # from devops_automation_infra.installers import docker
 from devops_automation_infra.plugins.ssh import SSH
+from automation_infra.plugins.admin import Admin
 
 from pytest_automation_infra.helpers import hardware_config
 
@@ -46,6 +47,8 @@ def _test_rsync_ssh(host, host_ssh):
 
     logging.info("rsync")
     sync_dir = host.mktemp()
+    if host.Admin.exists(sync_dir):
+        host.Admin.rm(sync_dir)
     host_ssh.rsync('/tmp/rsync', sync_dir)
     files = host_ssh.execute(f'find {sync_dir}/rsync/ -type f').split()
     assert set(files) == set([f'{sync_dir}/rsync/1/file', f'{sync_dir}/rsync/2/file'])
