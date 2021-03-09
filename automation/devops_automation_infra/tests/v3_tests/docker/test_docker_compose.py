@@ -1,5 +1,6 @@
 import logging
 
+from automation_infra.plugins.admin import Admin
 from devops_automation_infra.plugins import docker
 from devops_automation_infra.plugins import docker_compose
 from pytest_automation_infra.helpers import hardware_config
@@ -16,6 +17,8 @@ services:
 def test_compose(base_config):
     host = base_config.hosts.host
     temp_file = host.mktemp()
+    if host.Admin.exists(temp_file):
+        host.SshDirect.execute(f'rm {temp_file} -rf')
     host.SshDirect.put_contents(DUMMY_COMPOSE_FILE, temp_file)
     compose = base_config.hosts.host.DockerCompose
 
