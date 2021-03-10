@@ -6,9 +6,23 @@ if [ "$1" == "-h" ]; then
   exit 0
 fi
 
+install=""
+while test $# -gt 0
+do
+  case $1 in
+    --install)
+      install="--sf=\"--install --yaml-file=docker-compose-devops.yml\""
+      ;;
+    *)
+      break
+      ;;
+  esac
+  echo "$1"
+  shift
+done
 
 script_dir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
 prefix="$script_dir/../../../automation-infra/containerize.sh python -m pytest -p pytest_subprocessor -p pytest_grouper -p pytest_provisioner --provisioner=https://provisioner.tls.ai --heartbeat=https://heartbeat-server.tls.ai --ssl-cert=$HOME/.habertest/habertest.crt --ssl-key=$HOME/.habertest/habertest.key --sf=\"-p pytest_automation_infra \" -s "
-echo "running command: $prefix $*"
+echo "running command: $prefix $install $*"
 sleep 3
-$prefix "$*"
+$prefix $install "$*"
