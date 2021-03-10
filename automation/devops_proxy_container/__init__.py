@@ -42,7 +42,8 @@ def pytest_download_logs(host, dest_dir):
     dest_gz = '/tmp/automation_infra/logs.tar.gz'
     host.SSH.compress("/storage/logs/", dest_gz)
     host.SSH.download(re.escape(dest_dir), dest_gz)
-    download_consul_logs(host, dest_dir)
+    if host.Docker.container_by_name("consul"):
+        download_consul_logs(host, dest_dir)
 
 
 def download_consul_logs(host, dest_dir):
