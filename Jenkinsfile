@@ -67,6 +67,8 @@ pipeline {
                     coreLib.notification()
                 }
             }
+            sh "mkdir -p build-artifacts && mv devops-automation-infra/logs build-artifacts || true"
+            archiveArtifacts artifacts: 'build-artifacts/**/*', fingerprint: true
         }
     }
 }
