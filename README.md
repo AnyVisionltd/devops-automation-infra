@@ -19,3 +19,7 @@ In addition, in this repo there are various application plugins, which tunnel th
 + mongodb
 + seaweed
 + docker 
+
+Test example: [test_ssh.py](automation/devops_automation_infra/tests/v3_tests/docker/test_ssh.py)
+
+Command to run: ./run/local.sh ./automation/devops_automation_infra/tests/v3_tests/docker/test_ssh.py
