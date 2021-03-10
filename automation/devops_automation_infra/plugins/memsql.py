@@ -7,6 +7,7 @@ from pytest_automation_infra import helpers
 from pymysql.constants import CLIENT
 import copy
 from automation_infra.utils import waiter
+from utils import concurrently
 
 
 class Connection(object):
@@ -103,6 +104,35 @@ class Connection(object):
 
     def close(self):
         self.connection.close()
+
+    def change_pipeline_tracks_to_topic(self,host,topic):
+        self.fetch_one("USE tracks_db;")
+        result = self.fetch_one("show create pipeline load_kafka_tracks;")
+
+        logging.info("Checking if required topic is already configured on memsql pipeline")
+        if topic in result["Create Pipeline"]:
+            return
+
+        logging.info("Running required service to run db-schema")
+        concurrently.run({
+            "kafka_": lambda: host.Docker.restart_container_by_service_name("kafka_"),
+            "s3-filer": lambda: host.Docker.restart_container_by_service_name("seaweedfs-s3_1"),
+            "s3-volume": lambda: host.Docker.restart_container_by_service_name("seaweedfs-volume_1"),
+            "s3-master": lambda: host.Docker.restart_container_by_service_name("seaweedfs-master_1")
+        })
+
+        logging.info("Running db schema to put translator on seaweed")
+        host.Docker.restart_container_by_service_name("db-schema")
+        host.Docker.wait_container_down("db-schema")
+
+        self.execute("USE tracks_db; CALL manage_pipeline('load_kafka_tracks', 'STOP');")
+        self.execute("DROP PIPELINE load_kafka_tracks;")
+        self.execute(f"""CREATE OR REPLACE PIPELINE load_kafka_tracks
+                            AS LOAD DATA kafka "kafka.tls.ai:9092/{topic}"
+                            BATCH_INTERVAL 500
+                            WITH TRANSFORM ("http://seaweedfs-s3:8333/infra/pipelines/tracks_db/bt_2_3ga.tar.gz","track_transform.py","")
+                            INTO PROCEDURE load_tracks;
+                            """)
 
 
 class Memsql(object):
