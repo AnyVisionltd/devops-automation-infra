@@ -16,10 +16,6 @@ from devops_automation_infra.plugins.docker import Docker
 from devops_automation_infra.plugins.docker_compose import DockerCompose
 
 
-def pytest_addoption(parser):
-    compose_options.add_cmdline_options(parser)
-
-
 @pytest.hookimpl(tryfirst=True)
 def pytest_after_proxy_container(base_config, request):
     logging.info("running devops installer..")
