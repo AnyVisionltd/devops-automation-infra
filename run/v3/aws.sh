@@ -22,7 +22,7 @@ do
 done
 
 script_dir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
-prefix="$script_dir/../../../automation-infra/containerize.sh python -m pytest -p pytest_subprocessor -p pytest_grouper -p pytest_provisioner --provisioner=https://provisioner.tls.ai --heartbeat=https://heartbeat-server.tls.ai --ssl-cert=$HOME/.habertest/habertest.crt --ssl-key=$HOME/.habertest/habertest.key --sf=\"-p pytest_automation_infra \" -s "
+prefix="$script_dir/../../../automation-infra/containerize.sh python -m pytest -p pytest_subprocessor -p pytest_grouper -p pytest_provisioner --provisioner=https://provisioner.tls.ai --heartbeat=https://heartbeat-server.tls.ai --ssl-cert=$HOME/.habertest/habertest.crt --ssl-key=$HOME/.habertest/habertest.key --sf=\"-p pytest_automation_infra \" -s --noconftest"
 echo "running command: $prefix $install $*"
 sleep 3
 $prefix $install "$*"
