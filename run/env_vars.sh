@@ -30,7 +30,7 @@ read -p "Change? waiting 5 seconds... (y) " -t 5 yn
               exit;;
             * )
               script_dir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
-              prefix="$script_dir/../../automation-infra/containerize.sh python -m pytest -p pytest_subprocessor -p pytest_grouper -p pytest_provisioner --provisioner=$HABERTEST_PROVISIONER --heartbeat=$HABERTEST_HEARTBEAT_SERVER --ssl-cert=$HABERTEST_SSL_CERT --ssl-key=$HABERTEST_SSL_KEY --sf=\"-p pytest_automation_infra -p devops_proxy_container \" -s "
+              prefix="$script_dir/../../automation-infra/containerize.sh python -m pytest -p pytest_subprocessor -p pytest_grouper -p pytest_provisioner --provisioner=$HABERTEST_PROVISIONER --heartbeat=$HABERTEST_HEARTBEAT_SERVER --ssl-cert=$HABERTEST_SSL_CERT --ssl-key=$HABERTEST_SSL_KEY --sf=\"-p pytest_automation_infra -p devops_proxy_container \" -s --noconftest"
               echo "running command: $prefix $install $@"
               $prefix $install $@ ;;
 
