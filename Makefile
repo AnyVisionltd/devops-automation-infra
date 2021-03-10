@@ -28,11 +28,11 @@ test-sanity:
 # TODO: deprecate the non-v3 targets when the time comes
 test-docker-local-v3:
 	./run/v3/local.sh automation/devops_automation_infra/tests/v3_tests/docker/
-	./run/v3/local.sh --sf=--install automation/devops_automation_infra/tests/v3_tests/devops_docker/
+	./run/v3/local.sh --install automation/devops_automation_infra/tests/v3_tests/devops_docker/
 
 test-docker-aws-v3:
 	./run/v3/aws.sh automation/devops_automation_infra/tests/v3_tests/docker/ $(parallel)
-	./run/v3/aws.sh --sf=--install automation/devops_automation_infra/tests/v3_tests/devops_docker/ $(parallel)
+	./run/v3/aws.sh --install automation/devops_automation_infra/tests/v3_tests/devops_docker/ $(parallel)
 
 test-sanity-aws:
 	make test-docker-aws parallel="--num-parallel 3"
