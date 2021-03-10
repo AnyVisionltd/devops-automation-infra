@@ -12,7 +12,7 @@ while test $# -gt 0
 do
   case $1 in
     --install)
-      install="--sf=\"-p devops_docker_installer --yaml-file docker-compose-devops.yml\""
+      install="--sf=\"-p devops_docker_installer --yaml-file=docker-compose-devops.yml\""
       ;;
     *)
       break

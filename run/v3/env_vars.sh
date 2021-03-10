@@ -7,6 +7,20 @@ if [ "$1" == "-h" ]; then
   exit 0
 fi
 
+install=""
+while test $# -gt 0
+do
+  case $1 in
+    --install)
+      install="--sf=\"--install --yaml-file=docker-compose-devops.yml\""
+      ;;
+    *)
+      break
+      ;;
+  esac
+  echo "$1"
+  shift
+done
 
 printf "\nprovisioner: \t$HABERTEST_PROVISIONER \nheartbeat: \t$HABERTEST_HEARTBEAT_SERVER\n\n"
 read -p "Change? waiting 5 seconds... (y) " -t 5 yn
@@ -17,7 +31,7 @@ read -p "Change? waiting 5 seconds... (y) " -t 5 yn
             * )
               script_dir=$(dirname $(readlink -f "${BASH_SOURCE[0]}"))
               prefix="$script_dir/../../../automation-infra/containerize.sh python -m pytest -p pytest_subprocessor -p pytest_grouper -p pytest_provisioner --provisioner=$HABERTEST_PROVISIONER --heartbeat=$HABERTEST_HEARTBEAT_SERVER --ssl-cert=$HABERTEST_SSL_CERT --ssl-key=$HABERTEST_SSL_KEY --sf=\"-p pytest_automation_infra \" -s "
-              echo "running command: $prefix $install $@"
-              $prefix $install $@ ;;
+              echo "running command: $prefix $install $*"
+              $prefix $install $* ;;
 
   esac
