@@ -13,22 +13,6 @@ from automation_infra.plugins.ssh_direct import SshDirect, SSHCalledProcessError
 from devops_automation_infra.utils import kubectl
 
 
-def _memoize(function):
-    from functools import wraps
-    memo = {}
-
-    @wraps(function)
-    def wrapper(*args):
-        if args in memo:
-            return memo[args]
-        else:
-            rv = function(*args)
-            memo[args] = rv
-            return rv
-
-    return wrapper
-
-
 class ProxyDaemonSet(object):
 
     def __init__(self, cluster):
@@ -36,7 +20,6 @@ class ProxyDaemonSet(object):
         self.daemon_set_name = 'automation-proxy-daemonset'
         self._k8s_client = None
 
-    @_memoize
     def _automation_proxy_version(self):
         version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../proxy_container/version.sh")
         return subprocess.check_output([version_file]).split()[0].decode()
