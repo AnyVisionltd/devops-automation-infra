@@ -88,10 +88,10 @@ class Kafka:
         options = self._add_default_options(kwargs)
         return kafka.KafkaAdminClient(**options)
 
-    def consumer(self, **kwargs):
+    def consumer(self, *topics, **kwargs):
         self._expose()
         options = self._add_default_options(kwargs)
-        return kafka.KafkaConsumer(**options)
+        return kafka.KafkaConsumer(*topics, **options)
 
     def producer(self, **kwargs):
         self._expose()
