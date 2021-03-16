@@ -2,9 +2,7 @@ import logging
 import gossip
 
 
-@gossip.register('session',
-                 tags=['ssh', 'docker', 'devops_docker', 'core_docker', 'k8s', 'devops_k8s', 'core_k8s'],
-                 provides=['ssh'])
+@gossip.register('session', tags=['ssh'], provides=['ssh'])
 def ssh_direct_connect(host, request):
     init_host_ssh_direct(host)
     mkdir_infra(host)
