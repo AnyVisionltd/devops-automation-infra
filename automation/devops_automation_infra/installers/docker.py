@@ -6,6 +6,7 @@ import gossip
 from automation_infra.utils import waiter
 from compose_util.compose_manager import ComposeManager
 from compose_util.compose_options import add_cmdline_options
+from devops_automation_infra.installers import ssh
 
 from pytest_automation_infra import helpers
 
@@ -25,8 +26,9 @@ def setup():
     pass
 
 
-@gossip.register('session', tags=['docker', 'devops_docker'], needs=['ssh'], provides=['docker'])
+@gossip.register('session', tags=['docker', 'devops_docker'])
 def deploy_proxy_container(host, request):
+    ssh.ssh_direct_connect_session(host, request)
     host.ProxyContainer.run()
     waiter.wait_nothrow(host.SSH.connect, timeout=30)
 
@@ -53,6 +55,7 @@ def install_devops_product(host, request):
 def clean(host, request):
     logging.info("running devops clean_between_tests")
     host.TunnelManager.clear()
+    ssh.ssh_direct_connect_setup(host, request)
     waiter.wait_nothrow(host.SshDirect.connect, timeout=30)
     host.ProxyContainer.restart()
     waiter.wait_nothrow(host.SSH.connect, timeout=30)
