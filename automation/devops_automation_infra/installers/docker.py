@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 import os
 import gossip
-
+import re
 from automation_infra.utils import waiter
 from compose_util.compose_manager import ComposeManager
 from compose_util.compose_options import add_cmdline_options
@@ -63,14 +63,28 @@ def clean(host, request):
     host.Admin.log_to_journal(f">>>>> Test {request.node.nodeid} <<<<")
 
 
-@gossip.register('teardown', tags=['docker', 'devops_docker'], provides=['devops'])
+@gossip.register('teardown', tags=['docker', 'devops_docker'])
 def download(host, request):
     logs_dir = request.config.getoption("--logs-dir", f'logs/{datetime.now().strftime("%Y_%m_%d__%H%M_%S")}')
-    download_host_logs(host, logs_dir)
-
-
-def download_host_logs(host, logs_dir):
     dest_dir = os.path.join(logs_dir, host.alias)
+    download_host_logs(host, dest_dir)
+    if host.Docker.container_by_name("consul"):
+        download_consul_logs(host, dest_dir)
+
+
+def download_host_logs(host, dest_dir):
     os.makedirs(dest_dir, exist_ok=True)
     host.SshDirect.execute('sudo sh -c "journalctl > /tmp/journal.log"')
     host.SshDirect.download(dest_dir, '/tmp/journal.log')
+    host.SshDirect.execute('sudo chmod ugo+rw /tmp/automation_infra && '
+                           'docker logs automation_proxy &> /tmp/automation_proxy.log && '
+                           'sudo mv /tmp/automation_proxy.log /storage/logs/automation_proxy.log')
+    dest_gz = '/tmp/automation_infra/logs.tar.gz'
+    host.SSH.compress("/storage/logs/", dest_gz)
+    host.SSH.download(re.escape(dest_dir), dest_gz)
+
+
+def download_consul_logs(host, dest_dir):
+    consul_log_dir = os.path.join(dest_dir, "consul")
+    os.makedirs(consul_log_dir, exist_ok=True)
+    host.Docker.download_container_logs("consul", consul_log_dir, tail=1000)
