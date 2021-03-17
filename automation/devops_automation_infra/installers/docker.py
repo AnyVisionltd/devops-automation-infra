@@ -15,6 +15,8 @@ from automation_infra.plugins.ssh_direct import SshDirect
 from devops_automation_infra.plugins.ssh import SSH
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from devops_automation_infra.plugins.docker_compose import DockerCompose
+from automation_infra.plugins.ip_table import Iptables
+
 
 from devops_automation_infra.plugins.consul import Consul
 from devops_automation_infra.plugins.memsql import Memsql
@@ -54,11 +56,11 @@ def install_devops_product(host, request):
 @gossip.register('setup', tags=['docker', 'devops_docker'], provides=['devops'])
 def clean(host, request):
     logging.info("running devops clean_between_tests")
-    host.TunnelManager.clear()
-    ssh.ssh_direct_connect_setup(host, request)
-    waiter.wait_nothrow(host.SshDirect.connect, timeout=30)
-    host.ProxyContainer.restart()
+    host.Iptables.reset_state()
+    host.ProxyContainer.run()
     waiter.wait_nothrow(host.SSH.connect, timeout=30)
+    host.Admin.flush_journal()
+    host.Admin.log_to_journal(f">>>>> Test {request.node.nodeid} <<<<")
 
 
 @gossip.register('teardown', tags=['docker', 'devops_docker'], provides=['devops'])
