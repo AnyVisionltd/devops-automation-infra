@@ -94,5 +94,8 @@ class ProxyContainer(object):
     def restart(self):
         self.run()
 
+    def clear(self):
+        self.kill()
+
 
 plugins.register("ProxyContainer", ProxyContainer)
