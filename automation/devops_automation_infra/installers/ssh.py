@@ -22,8 +22,3 @@ def init_host_ssh_direct(host):
 
 def mkdir_infra(host):
     host.SshDirect.execute("mkdir -p -m 777 /tmp/automation_infra")
-
-
-@gossip.register('setup', tags=['ssh'], provides=['ssh'])
-def ssh_direct_connect_setup(host, request):
-    init_host_ssh_direct(host)
