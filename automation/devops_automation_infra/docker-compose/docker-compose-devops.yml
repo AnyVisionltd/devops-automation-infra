@@ -217,16 +217,19 @@ services:
     volumes:
     - ./redis/redis.conf:/opt/bitnami/redis/etc/redis.conf
   seaweedfs-filer:
-    command: -logdir=/logs -v=1 filer -master=seaweedfs-master-localnode.tls.ai:9333
+    command: -logdir=/logs -v=1 filer -encryptVolumeData  -master=seaweedfs-master-localnode.tls.ai:9333 -ip=seaweedfs-filer-localnode.tls.ai -s3 -s3.port=8333
       -ip=seaweedfs-filer-localnode.tls.ai
     depends_on:
     - seaweedfs-master
     environment:
-    - WEED_FILER_OPTIONS_RECURSIVE_DELETE=true
-    - WEED_LEVELDB2_ENABLED=true
-    - WEED_LEVELDB2_DIR=/data/filerldb2
-    - WEED_FILER_BUCKETS_FOLDER=/buckets
-    image: gcr.io/anyvision-training/seaweedfs:1.77
+      - WEED_CLUSTER_DEFAULT=sw
+      - WEED_CLUSTER_SW_MASTER=seaweedfs-master:9333
+      - WEED_CLUSTER_SW_FILER=seaweedfs-filer:8888
+      - WEED_FILER_OPTIONS_RECURSIVE_DELETE=false
+      - WEED_LEVELDB2_ENABLED=true
+      - WEED_LEVELDB2_DIR=/data/filerldb2
+      - WEED_FILER_OPTIONS_BUCKETS_FOLDER=/buckets
+    image: gcr.io/anyvision-training/seaweedfs:2.28
     logging:
       options:
         max-size: 1g
@@ -234,15 +237,18 @@ services:
       bridge:
         aliases:
         - seaweedfs-filer-localnode.tls.ai
+        - seaweedfs-s3-localnode.tls.ai
+        - seaweedfs-s3
     ports:
     - 8888:8888
+    - 8333:8333
     restart: always
     volumes:
     - /ssd/seaweed-filer/filerldb2:/data/filerldb2
     - /storage/logs/seaweedfs/filer:/logs
   seaweedfs-master:
-    command: -v=1 master -ip=seaweedfs-master-localnode.tls.ai -mdir=/data
-    image: gcr.io/anyvision-training/seaweedfs:1.77
+    command: -logdir=/logs -v=1 master -ip=seaweedfs-master-localnode.tls.ai -mdir=/data
+    image: gcr.io/anyvision-training/seaweedfs:2.28
     logging:
       options:
         max-size: 1g
@@ -250,35 +256,19 @@ services:
       bridge:
         aliases:
         - seaweedfs-master-localnode.tls.ai
+    environment:
+      - WEED_CLUSTER_DEFAULT=sw
+      - WEED_CLUSTER_SW_MASTER=seaweedfs-master:9333
+      - WEED_CLUSTER_SW_FILER=seaweedfs-filer:8888
     restart: always
     volumes:
     - /ssd/seaweed-master:/data
     - /storage/logs/seaweedfs/master:/logs
-  seaweedfs-s3:
-    command: -logdir=/logs -v=1 s3 -filer=seaweedfs-filer-localnode.tls.ai:8888 -port=8333
-    depends_on:
-    - seaweedfs-master
-    - seaweedfs-volume
-    - seaweedfs-filer
-    image: gcr.io/anyvision-training/seaweedfs:1.77
-    logging:
-      options:
-        max-size: 1g
-    networks:
-      bridge:
-        aliases:
-        - seaweedfs-s3-localnode.tls.ai
-    ports:
-    - 8333:8333
-    restart: always
-    volumes:
-    - /storage/logs/seaweedfs/s3:/logs
   seaweedfs-volume:
-    command: -logdir=/logs -v=1 volume -max=10000 -ip=seaweedfs-volume-localnode.tls.ai
-      -mserver=seaweedfs-master-localnode.tls.ai:9333 -port=8080 -dir=/data -compactionMBps=40
+    command: -logdir=/logs -v=1 volume -max=10000 -ip=seaweedfs-volume-localnode.tls.ai -mserver=seaweedfs-master-localnode.tls.ai:9333 -port=8080 -dir=/data -dir.idx=/idx -compactionMBps=40 -minFreeSpacePercent=7
     depends_on:
     - seaweedfs-master
-    image: gcr.io/anyvision-training/seaweedfs:1.77
+    image: gcr.io/anyvision-training/seaweedfs:2.28
     logging:
       options:
         max-size: 1g
@@ -286,9 +276,14 @@ services:
       bridge:
         aliases:
         - seaweedfs-volume-localnode.tls.ai
+    environment:
+      - WEED_CLUSTER_DEFAULT=sw
+      - WEED_CLUSTER_SW_MASTER=seaweedfs-master:9333
+      - WEED_CLUSTER_SW_FILER=seaweedfs-filer:8888
     restart: always
     volumes:
     - /storage/seaweed:/data
+    - /ssd/seaweed-volume-idx:/idx
     - /storage/logs/seaweedfs/volume:/logs
   zookeeper:
     environment:
