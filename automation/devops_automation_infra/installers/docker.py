@@ -35,7 +35,7 @@ def deploy_proxy_container(host, request):
     waiter.wait_nothrow(host.SSH.connect, timeout=30)
 
 
-@gossip.register('session_install', tags=['devops_docker'], provides=['devops_docker'])
+@gossip.register('session_install', tags=['devops_docker'])
 def install_devops_product(host, request):
     logging.info("running devops installer..")
     if request.config.getoption("--sync-time"):
@@ -53,7 +53,7 @@ def install_devops_product(host, request):
     logging.info("devops install finished!")
 
 
-@gossip.register('setup', tags=['docker', 'devops_docker'], provides=['devops'])
+@gossip.register('setup', tags=['docker', 'devops_docker'])
 def clean(host, request):
     logging.info("running devops clean_between_tests")
     host.Iptables.reset_state()
