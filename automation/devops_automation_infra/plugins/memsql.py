@@ -7,6 +7,7 @@ from pytest_automation_infra import helpers
 from pymysql.constants import CLIENT
 import copy
 from automation_infra.utils import waiter
+import json
 
 
 class Connection(object):
@@ -173,9 +174,13 @@ class Memsql(object):
 
     def ping(self):
         try:
-            return self.fetch_all("show databases")
-        except:
-            raise ConnectionError("Error connecting to Memsql db")
+            nodes_status = json.loads(self._host.Docker.run_cmd_in_service('memsql', 'gosu memsql memsql-admin list-nodes --json'))
+        except Exception as e:
+            raise Exception("Failed to execute node-status command") from e
+        else:
+            if not all([node['processState'] == 'Running' and node['isConnectable'] and node['recoveryState'] == 'Online'
+                        for node in  nodes_status['nodes']]):
+                raise Exception(f"memsql is not ready {nodes_status}")
 
     def reset_state(self):
         self.connection.truncate_all()
