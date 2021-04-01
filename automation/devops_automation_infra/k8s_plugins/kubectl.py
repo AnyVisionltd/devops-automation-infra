@@ -9,7 +9,10 @@ from infra.model import cluster_plugins
 class Kubectl:
     def __init__(self, cluster):
         self._cluster = cluster
-        self._master = self._cluster.K8SMaster()
+
+    @property
+    def _master(self):
+        return  self._cluster.K8SMaster()
 
     @property
     def _tunnel(self):
