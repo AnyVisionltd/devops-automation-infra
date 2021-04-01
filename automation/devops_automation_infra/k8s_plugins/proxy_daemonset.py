@@ -51,7 +51,7 @@ class ProxyDaemonSet(object):
         except ApiException as e:
             logging.exception("Exception when calling AppsV1Api->create_namespaced_daemon_set: %s\n" % e)
 
-        waiter.wait_nothrow(lambda: self._num_ready_pods() == len(self._cluster.hosts), timeout=30)
+        waiter.wait_for_predicate(lambda: self._num_ready_pods() == len(self._cluster.hosts), timeout=120)
         logging.debug(f"Deployment created. status={res.metadata.name}")
 
     def kill(self):
