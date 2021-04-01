@@ -3,10 +3,11 @@ import logging
 from devops_automation_infra.k8s_plugins.kubectl import Kubectl
 from devops_automation_infra.k8s_plugins.proxy_daemonset import ProxyDaemonSet
 from pytest_automation_infra.helpers import hardware_config
+from devops_automation_infra.installers import k8s
 
 
 @hardware_config(hardware={"host1": {"hardware_type": "vm", "base_image": "gravity_infra_230"}},
-                 grouping={"cluster1": {"hosts": ["host2"]}})
+                 grouping={"cluster1": {"hosts": ["host1"], "installer": "k8s"}})
 def test_kubectl(base_config):
     host = base_config.hosts.host1
     ssh = host.SshDirect
