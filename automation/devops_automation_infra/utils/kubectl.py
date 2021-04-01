@@ -72,3 +72,12 @@ def delete_pvc(client, name, namespace='default', clear_data=False):
         pv_name = v1.read_namespaced_persistent_volume_claim(name=name, namespace=namespace).spec.volume_name
         v1.patch_persistent_volume(name=pv_name, body={'spec': {'persistentVolumeReclaimPolicy': 'Delete'}})
     v1.delete_namespaced_persistent_volume_claim(name=name, namespace=namespace)
+
+
+def get_job_status(client, job_name, namespace='default'):
+    v1 = kubernetes.client.BatchV1Api(client)
+    return v1.read_namespaced_job(namespace=namespace, name=job_name).status
+
+
+def wait_for_job_to_succeed(client, job_name, namespace='default', timeout=60):
+    waiter.wait_for_predicate(lambda: get_job_status(client, namespace=namespace, job_name=job_name).succeeded == 1, timeout=timeout)
