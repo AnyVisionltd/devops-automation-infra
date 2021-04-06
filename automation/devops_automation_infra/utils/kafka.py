@@ -1,5 +1,6 @@
 from kafka.admin import ConfigResource
 from automation_infra.utils import waiter
+import kubernetes
 
 
 def clear_all_topics(admin, consumer):
@@ -43,3 +44,13 @@ def update_topic_config(admin, topic_name, body):
         raise Exception(
             f"Failed to update topic {topic_name}: {alter_config_response['resources'][0]['error_message']}")
 
+
+def update_retention_check_interval(k8s_client, kafka_name, namespace="default", interval=1000):
+    custom_object_client = kubernetes.client.CustomObjectsApi(k8s_client)
+    body = {"spec": {"kafka": {"config": {"log.retention.check.interval.ms": interval}}}}
+    custom_object_client.patch_namespaced_custom_object(namespace=namespace,
+                                                        group='kafka.strimzi.io',
+                                                        version='v1beta1',
+                                                        plural='kafkas',
+                                                        name=kafka_name,
+                                                        body=body)
