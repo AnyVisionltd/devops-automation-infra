@@ -53,10 +53,8 @@ def pod_exec(kubectl_client, namespace, name, command, executable="/bin/bash"):
 
 def get_secret_data(kubectl_client, namespace, name, path, decode=True):
     corev1api = kubernetes.client.CoreV1Api(kubectl_client)
-    secret_list = corev1api.list_namespaced_secret(namespace)
-    for secret in secret_list.items:
-        if secret.metadata.name == name:
-            return base64.b64decode(secret.data[path]) if decode else secret.data[path]
+    secret = corev1api.read_namespaced_secret(namespace=namespace, name=name)
+    return base64.b64decode(secret.data[path]) if decode else secret.data[path]
 
 
 def scale_stateful_set(client, replicas, name, namespace='default'):
