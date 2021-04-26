@@ -114,6 +114,7 @@ class Docker(object):
     def run_cmd_in_service(self, service_name, cmd):
         cmd_escaped = cmd.replace("'", "\\'")
         cmd = self._running_container_by_name_cmd(service_name) + f"| xargs -I{{}} {self._docker_bin} exec {{}} sh -c $'{cmd_escaped}'"
+        logging.info(f"cmd: {cmd}")
         return self.try_executing_and_verbosely_log_error(cmd).strip()
 
     def run_cmd_in_service_background(self, service_name, cmd):
