@@ -54,3 +54,23 @@ def update_retention_check_interval(k8s_client, kafka_name, namespace="default",
                                                         plural='kafkas',
                                                         name=kafka_name,
                                                         body=body)
+
+
+def read_x_messages_from_kafka_consumer(consumer, messages_number, reader_offset='latest', timeout_ms=5000):
+    if not consumer.subscription():
+        raise Exception("No topic assigned to consumer")
+
+    consumer.config['consumer_timeout_ms'] = timeout_ms
+
+    if not consumer.config['auto_offset_reset']:
+        consumer.config['auto_offset_reset'] = reader_offset
+
+    messages = []
+
+    while len(messages) < messages_number:
+        try:
+            messages.append(next(consumer).value)
+        except StopIteration:
+            raise TimeoutError(f"Could not read {messages_number} messages from kafka, got {len(messages)}")
+
+    return messages
