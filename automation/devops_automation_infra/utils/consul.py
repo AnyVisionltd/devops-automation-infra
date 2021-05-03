@@ -2,6 +2,13 @@ import os
 import pickle
 import logging
 from automation_infra.plugins.ssh_direct import SSHCalledProcessError
+import consul
+
+def get_services(client):
+    return client.catalog.services()[1]
+
+def get_service_nodes(client, service_name):
+    return client.catalog.service(service_name)[1]
 
 def backup_consul_keys(host):
     try:
