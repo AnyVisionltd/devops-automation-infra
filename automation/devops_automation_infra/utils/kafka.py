@@ -1,7 +1,7 @@
 from kafka.admin import ConfigResource
 from automation_infra.utils import waiter
 import kubernetes
-
+from devops_automation_infra.utils import kubectl
 
 def clear_all_topics(admin, consumer):
     for topic_name in admin.list_topics():
@@ -44,7 +44,6 @@ def update_topic_config(admin, topic_name, body):
         raise Exception(
             f"Failed to update topic {topic_name}: {alter_config_response['resources'][0]['error_message']}")
 
-
 def update_retention_check_interval(k8s_client, kafka_name, namespace="default", interval=1000):
     custom_object_client = kubernetes.client.CustomObjectsApi(k8s_client)
     body = {"spec": {"kafka": {"config": {"log.retention.check.interval.ms": interval}}}}
@@ -54,3 +53,25 @@ def update_retention_check_interval(k8s_client, kafka_name, namespace="default",
                                                         plural='kafkas',
                                                         name=kafka_name,
                                                         body=body)
+
+    waiter.wait_for_predicate(lambda: kubectl.is_stateful_set_ready(k8s_client, f"{kafka_name}-kafka", namespace=namespace), timeout=60)
+
+
+def read_x_messages_from_kafka_consumer(consumer, messages_number, reader_offset='latest', timeout_ms=5000):
+    if not consumer.subscription():
+        raise Exception("No topic assigned to consumer")
+
+    consumer.config['consumer_timeout_ms'] = timeout_ms
+
+    if not consumer.config['auto_offset_reset']:
+        consumer.config['auto_offset_reset'] = reader_offset
+
+    messages = []
+
+    while len(messages) < messages_number:
+        try:
+            messages.append(next(consumer).value)
+        except StopIteration:
+            raise TimeoutError(f"Could not read {messages_number} messages from kafka, got {len(messages)}")
+
+    return messages
