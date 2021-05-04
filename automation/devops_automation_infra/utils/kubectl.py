@@ -4,6 +4,7 @@ import logging
 from kubernetes.client import ApiException
 import kubernetes
 from kubernetes.stream import stream
+from automation_infra.utils import waiter
 
 
 def get_pods_by_label(kubectl_client, label, namespace='default'):
@@ -42,11 +43,6 @@ def is_stateful_set_ready(client, name, namespace='default'):
     return sts.status.replicas == sts.status.ready_replicas
 
 
-def get_pod_names_by_labels(kubectl_client, namespace, label):
-    pod_list = get_pods_by_label(kubectl_client, namespace, label)
-    return [pod.metadata.name for pod in pod_list]
-
-
 def pod_exec(kubectl_client, namespace, name, command, executable="/bin/bash"):
     corev1api = kubernetes.client.CoreV1Api(kubectl_client)
     response = stream(corev1api.connect_get_namespaced_pod_exec,
@@ -57,7 +53,29 @@ def pod_exec(kubectl_client, namespace, name, command, executable="/bin/bash"):
 
 def get_secret_data(kubectl_client, namespace, name, path, decode=True):
     corev1api = kubernetes.client.CoreV1Api(kubectl_client)
-    secret_list = corev1api.list_namespaced_secret(namespace)
-    for secret in secret_list.items:
-        if secret.metadata.name == name:
-            return base64.b64decode(secret.data[path]) if decode else secret.data[path]
+    secret = corev1api.read_namespaced_secret(namespace=namespace, name=name)
+    return base64.b64decode(secret.data[path]) if decode else secret.data[path]
+
+
+def scale_stateful_set(client, replicas, name, namespace='default'):
+    v1 = kubernetes.client.AppsV1Api(client)
+    v1.patch_namespaced_stateful_set_scale(name=name, namespace=namespace, body={'spec': {'replicas': replicas}})
+    waiter.wait_for_predicate(lambda: v1.read_namespaced_stateful_set_scale(name=name, namespace=namespace).status.replicas
+                              == replicas, timeout=30)
+
+
+def delete_pvc(client, name, namespace='default', clear_data=False):
+    v1 = kubernetes.client.CoreV1Api(client)
+    if clear_data:
+        pv_name = v1.read_namespaced_persistent_volume_claim(name=name, namespace=namespace).spec.volume_name
+        v1.patch_persistent_volume(name=pv_name, body={'spec': {'persistentVolumeReclaimPolicy': 'Delete'}})
+    v1.delete_namespaced_persistent_volume_claim(name=name, namespace=namespace)
+
+
+def get_job_status(client, job_name, namespace='default'):
+    v1 = kubernetes.client.BatchV1Api(client)
+    return v1.read_namespaced_job(namespace=namespace, name=job_name).status
+
+
+def wait_for_job_to_succeed(client, job_name, namespace='default', timeout=60):
+    waiter.wait_for_predicate(lambda: get_job_status(client, namespace=namespace, job_name=job_name).succeeded == 1, timeout=timeout)

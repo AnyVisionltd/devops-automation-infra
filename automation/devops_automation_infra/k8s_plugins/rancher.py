@@ -15,8 +15,12 @@ class Rancher:
     def __init__(self, cluster):
         self._cluster = cluster
         self._port = "9443"
-        self.BASE_URL = f"https://{self._cluster.master.ip}:{self._port}"
         self.auth_header = {"Authorization": f"Bearer {self.token}"}
+        self.alias = "rancher.anv"
+
+    @property
+    def base_url(self):
+        return f"https://{self._cluster.K8SMaster().ip}:{self._port}"
 
     @property
     def token(self):
@@ -28,25 +32,25 @@ class Rancher:
     def _default_project_id(self):
         return self.project_details()["id"]
 
-    def cli_login(self, alias, port):
-        cmd = f"rancher login https://{alias}:{port} --token {self.token} --skip-verify"
+    def cli_login(self):
+        cmd = f"rancher login https://{self.alias} --token {self.token} --skip-verify"
         res = self._cluster.Gravity.exec(cmd)
         return res
 
     def refresh_catalog(self, catalog_name):
-        self.clear_rancher_cache()
+        self.clear_cache()
         self._cluster.Gravity.exec(f"rancher catalog refresh --wait {catalog_name}")
 
     def project_details(self):
-        res = requests.get(f"{self.BASE_URL}/v3/projects", headers=self.auth_header, verify=False)
+        res = requests.get(f"{self.base_url}/v3/projects", headers=self.auth_header, verify=False)
         assert res.status_code == 200
         projects = res.json()['data']
         return [project for project in projects if project['name'] == 'Default'][0]
 
     def clear_cache(self):
         remove_cache_cmd = "rm -rf management-state/catalog-cache/*"
-        rancher_pod_name = kubectl_utils.get_pod_names_by_labels(self._cluster.Kubectl.client(),
-                                                                 namespace="cattle-system", label="app=rancher")[0]
+        rancher_pod_name = kubectl_utils.get_pods_by_label(self._cluster.Kubectl.client(),
+                                                           namespace="cattle-system", label="app=rancher")[0].metadata.name
         return kubectl_utils.pod_exec(self._cluster.Kubectl.client(), namespace="cattle-system",
                                       name=rancher_pod_name, command=remove_cache_cmd)
 
@@ -54,21 +58,22 @@ class Rancher:
         data = {"type": "catalog", "kind": "helm", "branch": branch,
                 "url": url, "name": name, "username": username,
                 "password": password}
-        res = requests.post(f"{self.BASE_URL}/v3/catalog",
+        res = requests.post(f"{self.base_url}/v3/catalog",
                             headers=self.auth_header,
                             data=json.dumps(data),
                             verify=False)
         # 409 is ok since it means the  catalog already exists
         assert res.status_code == 201 or res.status_code == 409
+        self.refresh_catalog(name)
 
     def delete_catalog(self, catalog_name):
-        res = requests.post(f"{self.BASE_URL}/v3/catalog/{catalog_name}",
+        res = requests.post(f"{self.base_url}/v3/catalog/{catalog_name}",
                             headers=self.auth_header,
                             verify=False)
         assert res.status_code == 404
 
     def wait_for_app(self, app_name, timeout):
-        logging.info(f"Waiting for application to be available. see {self.BASE_URL} for status")
+        logging.info(f"Waiting for application to be available. see {self.base_url} for status")
         self._cluster.Gravity.exec(f"rancher wait {app_name} --timeout {timeout}")
 
     def upgrade_app(self, app_name, version, wait=True, timeout="120", **kwargs):
@@ -105,7 +110,7 @@ class Rancher:
         self._cluster.Gravity.exec(f"rancher app delete {app_name}")
 
     def app_exists(self, app_name):
-        res = requests.get(f"{self.BASE_URL}/v3/project/local:p-8n6zr/apps/p-8n6zr%3A{app_name}",
+        res = requests.get(f"{self.base_url}/v3/project/local:p-8n6zr/apps/p-8n6zr%3A{app_name}",
                            headers=self.auth_header,
                            verify=False)
         assert res.status_code == 200 or res.status_code == 404
