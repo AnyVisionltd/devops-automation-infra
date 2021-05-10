@@ -10,6 +10,15 @@ def check_output(command):
 
 def check_environment():
     start = time.time()
+    gravity_doesnt_exist = False
+    try:
+        check_output('gravity status')
+    except subprocess.CalledProcessError as e:
+        gravity_doesnt_exist = True
+        assert e.returncode == 127, \
+            "Gravity exists on machine.. please purge from machine before resuming"
+    assert gravity_doesnt_exist, "Gravity exists on machine.. please purge from machine before resuming"
+
     docker_config_json = Path.joinpath(Path.home(), '.docker/config.json')
     assert docker_config_json.exists(), \
         "Please get docker login credentials from https://anyvision.atlassian.net/wiki/spaces/INTEGRATION/pages/752321438/Software+Installation+from+scratch"
