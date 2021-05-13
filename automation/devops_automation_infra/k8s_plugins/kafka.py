@@ -101,6 +101,9 @@ class Kafka:
     def ping(self):
         return self.consumer().topics()
 
+    def clear_data(self):
+        kubectl.delete_stateful_set_data(self._cluster.Kubectl.client(), f"{self._name}-kafka", timeout=60 * 3)
+
 
 cluster_plugins.register('Kafka', Kafka)
 
