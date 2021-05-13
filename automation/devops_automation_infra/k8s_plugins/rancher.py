@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-
+import yaml
 import requests
 
 from automation_infra.plugins.ssh_direct import SSHCalledProcessError
@@ -86,6 +86,11 @@ class Rancher:
         logging.debug(cmd)
         if wait:
             self.wait_for_app(app_name, timeout)
+
+    def get_app_version(self, app_name):
+        cmd = f"rancher app ls {app_name} -o yaml"
+        app_yaml = yaml.load(self._cluster.Gravity.exec(cmd))
+        return app_yaml['Version']
 
     def install_app(self, app_name, version, image_pull_policy="Always", docker_registry="", namespace="default",
                     wait=True, timeout="120", force=True, **kwargs):
