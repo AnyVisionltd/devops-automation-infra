@@ -6,7 +6,7 @@ import time
 
 
 def check_output(command):
-    subprocess.run(command, shell=True, stdout=subprocess.PIPE, check=True, input="")
+    subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=True, input="")
 
 def check_environment():
     start = time.time()
