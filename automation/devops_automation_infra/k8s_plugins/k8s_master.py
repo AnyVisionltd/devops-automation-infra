@@ -10,9 +10,9 @@ class K8SMaster:
         self._cluster = cluster
 
     def __call__(self):
-        masters = self.list_masters()
+        masters = waiter.wait_nothrow(lambda: self.list_masters(), timeout=150)
         if len(masters) > 0:
-            return next(iter(masters))
+            return masters[0]
         else:
             raise Exception("Couldn't find running masters nodes")
 
@@ -20,7 +20,7 @@ class K8SMaster:
         masters = []
         for host in self._cluster.hosts.values():
             try:
-                waiter.wait_nothrow(lambda: host.SshDirect.execute("sudo kubectl get po"), timeout=150)
+                host.SshDirect.execute("sudo kubectl get po")
                 masters.append(host)
             except:
                 continue
