@@ -14,6 +14,15 @@ def get_pods_by_label(kubectl_client, label, namespace='default'):
     return pods.items
 
 
+def get_nodes_by_label(client, label):
+    v1 = kubernetes.client.CoreV1Api(client)
+    return v1.list_node(label_selector=label).items
+
+
+def get_stateful_set(client, name, namespace="default"):
+    v1 = kubernetes.client.AppsV1Api(client)
+    return v1.read_namespaced_stateful_set(name=name, namespace=namespace)
+
 def create_generic_secret(client, name, data, namespace='default', type='Opaque'):
     v1 = kubernetes.client.CoreV1Api(client)
     sec = kubernetes.client.V1Secret()
@@ -42,7 +51,6 @@ def is_stateful_set_ready(client, name, namespace='default'):
     v1 = kubernetes.client.AppsV1Api(client)
     sts = v1.read_namespaced_stateful_set_status(name=name, namespace=namespace)
     return sts.status.replicas == sts.status.ready_replicas
-
 
 def is_deployment_ready(client, name, namespace='default'):
     v1 = kubernetes.client.AppsV1Api(client)
