@@ -110,8 +110,8 @@ def delete_stateful_set_data(client, name, namespace='default', clear_data=False
     for pvc in pvcs_to_delete:
         delete_pvc(client, pvc, namespace, clear_data)
 
-    scale_stateful_set(client, replicas, name, namespace, timeout=60)
-    waiter.wait_for_predicate(lambda :is_stateful_set_ready(client, name), timeout=timeout)
+    scale_stateful_set(client, replicas, name, namespace, timeout=timeout)
+    waiter.wait_for_predicate(lambda: is_stateful_set_ready(client, name), timeout=timeout)
 
 
 def delete_deployment_data(client, name, namespace='default', clear_data=False):
