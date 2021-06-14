@@ -6,6 +6,7 @@ import re
 from automation_infra.utils import waiter
 from compose_util.compose_manager import ComposeManager
 from compose_util.compose_options import add_cmdline_options
+from devops_automation_infra.utils import container
 
 
 from automation_infra.plugins.ssh_direct import SshDirect
@@ -13,11 +14,11 @@ from devops_automation_infra.plugins.ssh import SSH
 from devops_automation_infra.k8s_plugins.proxy_daemonset import ProxyDaemonSet
 from automation_infra.utils import concurrently
 from devops_automation_infra.installers import ssh
-
+from functools import partial
 
 @gossip.register('session', tags=['k8s', 'devops_k8s'])
 def deploy_proxy_pod(cluster, request):
-    concurrently.run([lambda: ssh.ssh_direct_connect_session(host, request) for host in cluster.hosts.values()])
+    concurrently.run([partial(ssh.ssh_direct_connect_session, host, request) for host in cluster.hosts.values()])
     logging.info("Deploying proxy daemon-set")
     cluster.ProxyDaemonSet.run()
     for host in cluster.hosts.values():
@@ -30,9 +31,9 @@ def install_devops_product(cluster, request):
     pass
 
 
-@gossip.register('setup', tags=['docker', 'devops_k8s'])
+@gossip.register('setup', tags=['k8s', 'devops_k8s'])
 def clean(cluster, request):
-    concurrently.run([lambda: ssh.ssh_direct_connect_session(host, request) for host in cluster.hosts.values()])
+    concurrently.run([partial(ssh.ssh_direct_connect_session, host, request) for host in cluster.hosts.values()])
     logging.info("running devops clean_base_btwn_tests")
     cluster.ProxyDaemonSet.restart()
     for host in cluster.hosts.values():
@@ -52,9 +53,16 @@ def download_host_logs(host, dest_dir):
     os.makedirs(dest_dir, exist_ok=True)
     host.SshDirect.execute('sudo sh -c "journalctl > /tmp/journal.log"')
     host.SshDirect.download(dest_dir, '/tmp/journal.log')
-    host.SshDirect.execute('sudo chmod ugo+rw /storage/logs &&'
-                           'sudo docker ps | grep automation-proxy-daemonset | grep -v k8s_POD | awk {\'print $1\'} |'
-                           'xargs sudo docker logs &> /storage/logs/automation_proxy.log')
+    container_engine = container.get_container_engine
+    import pdb; pdb.set_trace()
+    if container_engine == "docker":
+        host.SshDirect.execute('sudo chmod ugo+rw /storage/logs &&'
+                               'sudo docker ps | grep automation-proxy-daemonset | grep -v k8s_POD | awk {\'print $1\'} |'
+                               'xargs sudo docker logs &> /storage/logs/automation_proxy.log')
+    elif container_engine == "crio":
+        host.SshDirect.execute('sudo chmod ugo+rw /storage/logs &&'
+                               'sudo crictl | grep automation-proxy | awk {\'print $1\'} |'
+                               'xargs sudo crictl logs &> /storage/logs/automation_proxy.log')
     dest_gz = '/tmp/logs.tar.gz'
     host.SSH.compress("/storage/logs/", dest_gz)
     host.SSH.download(re.escape(dest_dir), dest_gz)
