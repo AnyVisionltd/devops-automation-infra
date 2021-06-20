@@ -4,7 +4,6 @@ import gossip
 
 @gossip.register('session', tags=['ssh'], provides=['ssh'])
 def ssh_direct_connect_session(host, request):
-    add_ssh_agent(host)
     init_host_ssh_direct(host)
     mkdir_infra(host)
 
