@@ -23,6 +23,7 @@ def get_stateful_set(client, name, namespace="default"):
     v1 = kubernetes.client.AppsV1Api(client)
     return v1.read_namespaced_stateful_set(name=name, namespace=namespace)
 
+
 def create_generic_secret(client, name, data, namespace='default', type='Opaque'):
     v1 = kubernetes.client.CoreV1Api(client)
     sec = kubernetes.client.V1Secret()
@@ -39,7 +40,8 @@ def create_image_pull_secret(client, docker_config_path=None):
         data = {'.dockerconfigjson': base64.b64encode(f.read()).decode()}
 
     try:
-        create_generic_secret(client=client, namespace='default', name='imagepullsecret', type='kubernetes.io/dockerconfigjson', data=data)
+        create_generic_secret(client=client, namespace='default', name='imagepullsecret',
+                              type='kubernetes.io/dockerconfigjson', data=data)
     except ApiException as e:
         if e.status == 409:
             logging.debug("imagepullsecret is already exists")
@@ -52,16 +54,18 @@ def is_stateful_set_ready(client, name, namespace='default'):
     sts = v1.read_namespaced_stateful_set_status(name=name, namespace=namespace)
     return sts.status.replicas == sts.status.ready_replicas
 
+
 def is_deployment_ready(client, name, namespace='default'):
     v1 = kubernetes.client.AppsV1Api(client)
     deployment = v1.read_namespaced_deployment(name=name, namespace=namespace)
     return deployment.status.replicas == deployment.status.ready_replicas
 
+
 def pod_exec(kubectl_client, namespace, name, command, executable="/bin/bash"):
     corev1api = kubernetes.client.CoreV1Api(kubectl_client)
     response = stream(corev1api.connect_get_namespaced_pod_exec,
-                  name, namespace, command=[executable, "-c"] + command.split(),
-                  stderr=True, stdin=False, stdout=True, tty=False)
+                      name, namespace, command=[executable, "-c"] + command.split(),
+                      stderr=True, stdin=False, stdout=True, tty=False)
     return response
 
 
@@ -74,15 +78,17 @@ def get_secret_data(kubectl_client, namespace, name, path, decode=True):
 def scale_stateful_set(client, replicas, name, namespace='default', timeout=30):
     v1 = kubernetes.client.AppsV1Api(client)
     v1.patch_namespaced_stateful_set_scale(name=name, namespace=namespace, body={'spec': {'replicas': replicas}})
-    waiter.wait_for_predicate(lambda: v1.read_namespaced_stateful_set_scale(name=name, namespace=namespace).status.replicas
-                              == replicas, timeout=timeout)
+    waiter.wait_for_predicate(
+        lambda: v1.read_namespaced_stateful_set_scale(name=name, namespace=namespace).status.replicas
+                == replicas, timeout=timeout)
 
 
 def scale_deployment(client, replicas, name, namespace='default'):
     v1 = kubernetes.client.AppsV1Api(client)
     v1.patch_namespaced_deployment_scale(name=name, namespace=namespace, body={'spec': {'replicas': replicas}})
-    waiter.wait_for_predicate(lambda: v1.read_namespaced_deployment_scale(name=name, namespace=namespace).status.replicas
-                              == replicas, timeout=30)
+    waiter.wait_for_predicate(
+        lambda: v1.read_namespaced_deployment_scale(name=name, namespace=namespace).status.replicas
+                == replicas, timeout=30)
 
 
 def delete_pvc(client, name, namespace='default', clear_data=False):
@@ -122,7 +128,7 @@ def delete_deployment_data(client, name, namespace='default', clear_data=False):
     scale_deployment(client, 0, name, namespace)
 
     pvcs_to_delete = [volume.persistent_volume_claim.claim_name for volume in deployment_spec.template.spec.volumes
-                      if volume.persistent_volume_claim ]
+                      if volume.persistent_volume_claim]
     for pvc in pvcs_to_delete:
         delete_pvc(client, pvc, namespace, clear_data)
 
@@ -147,7 +153,7 @@ def recycle_pvc(client, pvc_name, namespace='default', timeout=60):
 
     volume = k8s_client.V1Volume(
         name="pvc-volume",
-        persistent_volume_claim = k8s_client.V1PersistentVolumeClaimVolumeSource(claim_name=pvc_name))
+        persistent_volume_claim=k8s_client.V1PersistentVolumeClaimVolumeSource(claim_name=pvc_name))
     pod_spec = k8s_client.V1PodSpec(volumes=[volume], containers=[container], restart_policy="Never")
     pod_name = f"pv-cleaner-{str(uuid.uuid4())[:6]}"
     pod = k8s_client.V1Pod(metadata=k8s_client.V1ObjectMeta(name=pod_name), spec=pod_spec)
@@ -173,4 +179,5 @@ def get_job_status(client, job_name, namespace='default'):
 
 
 def wait_for_job_to_succeed(client, job_name, namespace='default', timeout=60):
-    waiter.wait_for_predicate(lambda: get_job_status(client, namespace=namespace, job_name=job_name).succeeded == 1, timeout=timeout)
+    waiter.wait_for_predicate(lambda: get_job_status(client, namespace=namespace, job_name=job_name).succeeded == 1,
+                              timeout=timeout)
