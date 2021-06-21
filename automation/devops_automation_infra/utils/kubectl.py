@@ -181,3 +181,42 @@ def get_job_status(client, job_name, namespace='default'):
 def wait_for_job_to_succeed(client, job_name, namespace='default', timeout=60):
     waiter.wait_for_predicate(lambda: get_job_status(client, namespace=namespace, job_name=job_name).succeeded == 1,
                               timeout=timeout)
+
+
+def is_cluster_ready(client):
+    v1 = kubernetes.client.CoreV1Api(client)
+    nodes = v1.list_node().items
+    ready_nodes = []
+    for node in nodes:
+        for cond in node.status.conditions:
+            if cond.type == "Ready" and cond.status == "True":
+                ready_nodes.append(node)
+
+    return len(nodes) == len(ready_nodes)
+
+
+def label_node(client, node_name, labels):
+    v1 = kubernetes.client.CoreV1Api(client)
+    body = {
+        "metadata": {
+            "labels": labels
+        }
+    }
+    v1.patch_node(node_name, body)
+
+
+def taint_node(client, node_name, taints):
+    v1 = kubernetes.client.CoreV1Api(client)
+    list_of_taints = []
+
+    for label, effect in taints.items():
+        k, v = label.split('=')
+        list_of_taints.append(kubernetes.client.V1Taint(key=k, value=v, effect=effect))
+
+    body = {
+        "spec": {
+            "taints": list_of_taints
+        }
+    }
+
+    v1.patch_node(node_name, body)
