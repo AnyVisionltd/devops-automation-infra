@@ -32,14 +32,27 @@ class Rancher:
     def _default_project_id(self):
         return self.project_details()["id"]
 
+    def cli_execute(self, cmd):
+        self.cli_login()
+        return self._execute(cmd)
+
+    def _execute(self, cmd):
+        ssh = self._cluster.K8SMaster().SshDirect
+        try:
+            ssh.execute("which rancher")
+        except SSHCalledProcessError:
+            return self._cluster.Gravity.exec(cmd)
+
+        return ssh.execute(cmd)
+
     def cli_login(self):
         cmd = f"rancher login https://{self.alias} --token {self.token} --skip-verify"
-        res = self._cluster.Gravity.exec(cmd)
-        return res
+        self._execute(f"echo '127.0.0.1 rancher.anv' | sudo tee /etc/hosts -a > /dev/null 2>&1")
+        self._execute(cmd)
 
     def refresh_catalog(self, catalog_name):
         self.clear_cache()
-        self._cluster.Gravity.exec(f"rancher catalog refresh --wait {catalog_name}")
+        self.cli_execute(f"rancher catalog refresh --wait {catalog_name}")
 
     def project_details(self):
         res = requests.get(f"{self.base_url}/v3/projects", headers=self.auth_header, verify=False)
@@ -74,7 +87,7 @@ class Rancher:
 
     def wait_for_app(self, app_name, timeout):
         logging.info(f"Waiting for application to be available. see {self.base_url} for status")
-        self._cluster.Gravity.exec(f"rancher wait {app_name} --timeout {timeout}")
+        self.cli_execute(f"rancher wait {app_name} --timeout {timeout}")
 
     def upgrade_app(self, app_name, version, wait=True, timeout="120", **kwargs):
         cmd_options = ""
@@ -82,14 +95,14 @@ class Rancher:
             cmd_options += f" --set {k}={v}"
             cmd_options += f" {app_name} {version}"
         cmd = f"rancher app upgrade {cmd_options}"
-        self._cluster.Gravity.exec(cmd)
+        self.cli_execute(cmd)
         logging.debug(cmd)
         if wait:
             self.wait_for_app(app_name, timeout)
 
     def get_app_version(self, app_name):
         cmd = f"rancher app ls {app_name} -o yaml"
-        app_yaml = yaml.load(self._cluster.Gravity.exec(cmd))
+        app_yaml = yaml.load(self.cli_execute(cmd))
         return app_yaml['Version']
 
     def install_app(self, app_name, version, image_pull_policy="Always", docker_registry="", namespace="default",
@@ -107,12 +120,12 @@ class Rancher:
             cmd_options += f" --version {version} --namespace {namespace} {app_name} {app_name} --no-prompt"
             cmd = f"{rancher_cmd} {cmd_options}"
             logging.debug(cmd)
-            self._cluster.Gravity.exec(cmd)
+            self.cli_execute(cmd)
             if wait:
                 self.wait_for_app(app_name, timeout)
 
     def delete_app(self, app_name):
-        self._cluster.Gravity.exec(f"rancher app delete {app_name}")
+        self.cli_execute(f"rancher app delete {app_name}")
 
     def app_exists(self, app_name):
         res = requests.get(f"{self.base_url}/v3/project/local:p-8n6zr/apps/p-8n6zr%3A{app_name}",
