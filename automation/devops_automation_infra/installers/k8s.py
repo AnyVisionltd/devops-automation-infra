@@ -6,6 +6,7 @@ import re
 from automation_infra.utils import waiter
 from compose_util.compose_manager import ComposeManager
 from compose_util.compose_options import add_cmdline_options
+from devops_automation_infra.utils import container
 
 
 from automation_infra.plugins.ssh_direct import SshDirect
@@ -52,9 +53,15 @@ def download_host_logs(host, dest_dir):
     os.makedirs(dest_dir, exist_ok=True)
     host.SshDirect.execute('sudo sh -c "journalctl > /tmp/journal.log"')
     host.SshDirect.download(dest_dir, '/tmp/journal.log')
-    host.SshDirect.execute('sudo chmod ugo+rw /storage/logs &&'
-                           'sudo docker ps | grep automation-proxy-daemonset | grep -v k8s_POD | awk {\'print $1\'} |'
-                           'xargs sudo docker logs &> /storage/logs/automation_proxy.log')
+    container_engine = container.get_container_engine(host)
+    if container_engine == "docker":
+        host.SshDirect.execute('sudo chmod ugo+rw /storage/logs &&'
+                               'sudo docker ps | grep automation-proxy-daemonset | grep -v k8s_POD | awk {\'print $1\'} |'
+                               'xargs sudo docker logs &> /storage/logs/automation_proxy.log')
+    elif container_engine == "crio":
+        host.SshDirect.execute('sudo chmod ugo+rw /storage/logs &&'
+                               'sudo crictl ps | grep automation-proxy | awk {\'print $1\'} |'
+                               'xargs sudo crictl logs &> /storage/logs/automation_proxy.log')
     dest_gz = '/tmp/logs.tar.gz'
     host.SSH.compress("/storage/logs/", dest_gz)
     host.SSH.download(re.escape(dest_dir), dest_gz)
