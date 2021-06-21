@@ -13,11 +13,11 @@ from devops_automation_infra.plugins.ssh import SSH
 from devops_automation_infra.k8s_plugins.proxy_daemonset import ProxyDaemonSet
 from automation_infra.utils import concurrently
 from devops_automation_infra.installers import ssh
-
+from functools import partial
 
 @gossip.register('session', tags=['k8s', 'devops_k8s'])
 def deploy_proxy_pod(cluster, request):
-    concurrently.run([lambda: ssh.ssh_direct_connect_session(host, request) for host in cluster.hosts.values()])
+    concurrently.run([partial(ssh.ssh_direct_connect_session, host, request) for host in cluster.hosts.values()])
     logging.info("Deploying proxy daemon-set")
     cluster.ProxyDaemonSet.run()
     for host in cluster.hosts.values():
@@ -30,9 +30,9 @@ def install_devops_product(cluster, request):
     pass
 
 
-@gossip.register('setup', tags=['docker', 'devops_k8s'])
+@gossip.register('setup', tags=['k8s', 'devops_k8s'])
 def clean(cluster, request):
-    concurrently.run([lambda: ssh.ssh_direct_connect_session(host, request) for host in cluster.hosts.values()])
+    concurrently.run([partial(ssh.ssh_direct_connect_session, host, request) for host in cluster.hosts.values()])
     logging.info("running devops clean_base_btwn_tests")
     cluster.ProxyDaemonSet.restart()
     for host in cluster.hosts.values():
