@@ -1,14 +1,17 @@
 import kubernetes
 from kubernetes.client import ApiClient
 
+from automation_infra.plugins.ssh_direct import SSHCalledProcessError
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from devops_automation_infra.k8s_plugins.k8s_master import K8SMaster
 from infra.model import cluster_plugins
+from  automation_infra.utils import waiter
 
 
 class Kubectl:
     def __init__(self, cluster):
         self._cluster = cluster
+        self._api_token = None
 
     @property
     def _master(self):
@@ -24,8 +27,8 @@ class Kubectl:
 
     def _create_config(self, **kwargs):
         ssh = self._master.SshDirect
-        api_token = kwargs.pop("api_token",
-                               ssh.execute('''sudo kubectl get secrets -n kube-system -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='default')].data.token}"|base64 --decode'''))
+        self._create_service_account()
+        api_token = self._api_token
         tunnel = self._tunnel
         config = kubernetes.client.Configuration()
         config.host = f"https://{tunnel.local_endpoint}"
@@ -35,6 +38,20 @@ class Kubectl:
         for k, v in kwargs.items():
             setattr(config, k, v)
         return config
+
+    def _create_service_account(self):
+        if self._api_token:
+            return
+        ssh = self._master.SshDirect
+        try:
+            ssh.execute("sudo kubectl create sa automation-admin")
+            ssh.execute("sudo kubectl create clusterrolebinding automation-admin --serviceaccount=default:automation-admin --clusterrole=cluster-admin")
+        except SSHCalledProcessError as e:
+            pass
+
+        get_sa_token = lambda: ssh.execute('''sudo kubectl get secrets -n default -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='automation-admin')].data.token}"|base64 --decode''').strip()
+        waiter.wait_for_predicate(get_sa_token, timeout=30)
+        self._api_token = get_sa_token()
 
     def client(self, **kwargs):
         config = self._create_config(**kwargs)
