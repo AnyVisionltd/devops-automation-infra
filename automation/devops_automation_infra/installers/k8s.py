@@ -43,7 +43,7 @@ def clean(cluster, request):
 @gossip.register('teardown', tags=['k8s', 'devops_k8s'])
 def download(cluster, request):
     logs_dir = request.config.getoption("--logs-dir", f'logs/{datetime.now().strftime("%Y_%m_%d__%H%M_%S")}')
-    concurrently.run([lambda: download_host_logs(host, os.path.join(logs_dir, host.alias))
+    concurrently.run([partial(download_host_logs, host, os.path.join(logs_dir, host.alias))
                       for host in cluster.hosts.values()])
     # concurrently.run([lambda: download_consul_logs(host, os.path.join(logs_dir, host.alias))
     #                   for host in cluster.hosts.values() if host.Docker.container_by_name("consul")])
