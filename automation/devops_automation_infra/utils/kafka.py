@@ -1,3 +1,5 @@
+import time
+
 from kafka.admin import ConfigResource
 from automation_infra.utils import waiter
 import kubernetes
@@ -75,3 +77,19 @@ def read_x_messages_from_kafka_consumer(consumer, messages_number, reader_offset
             raise TimeoutError(f"Could not read {messages_number} messages from kafka, got {len(messages)}")
 
     return messages
+
+
+def read_messages_from_kafka_consumer(consumer, reader_offset='latest', consumer_timeout=5000, timeout=30):
+    if not consumer.subscription():
+        raise Exception("No topic assigned to consumer")
+
+    consumer.config['consumer_timeout_ms'] = consumer_timeout
+
+    start_time = time.time()
+    if not consumer.config['auto_offset_reset']:
+        consumer.config['auto_offset_reset'] = reader_offset
+
+    while True:
+        yield next(consumer).value
+        if start_time - time.time() > timeout:
+            raise TimeoutError("Predicate timed out")
