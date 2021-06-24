@@ -71,7 +71,7 @@ class Kafka:
 
         logging.debug("Waiting for kafka brokers to restart")
         waiter.wait_for_predicate(lambda: self._kafka_brokers_restarted(pods_timestamps) is True, timeout=30)
-        waiter.wait_for_predicate(lambda: self._is_running is True, timeout=30)
+        waiter.wait_for_predicate(lambda: self._is_running is True, timeout=60)
 
     def _add_default_options(self, kwargs):
         options = {'bootstrap_servers': self._bootstrap_endpoint()}
@@ -102,7 +102,10 @@ class Kafka:
         return self.consumer().topics()
 
     def clear_data(self):
-        kubectl.delete_stateful_set_data(self._cluster.Kubectl.client(), f"{self._name}-kafka", timeout=60 * 3)
+        client = self._cluster.Kubectl.client()
+        kubectl.scale_deployment(client, name="strimzi-cluster-operator", namespace=self._namespace, replicas=0)
+        kubectl.delete_stateful_set_data(client, f"{self._name}-kafka", timeout=200)
+        kubectl.scale_deployment(client, name="strimzi-cluster-operator", namespace=self._namespace, replicas=1)
 
 
 cluster_plugins.register('Kafka', Kafka)
