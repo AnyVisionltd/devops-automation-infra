@@ -30,7 +30,7 @@ def setup_cluster(cluster, request):
     main_master.k8s_name = "k3s-master"
 
     main_master.SshDirect.execute(
-        "curl -sfL https://get.k3s.io | sh -s - --cluster-init --cluster-reset --cluster-reset-restore-path=/root/k3s-infra-1174-snapshot")
+        "curl -sfL https://get.k3s.io | sh -s - --cluster-init --cluster-reset --cluster-reset-restore-path=/root/k3s-infra-1174-snapshot || true")
     waiter.wait_nothrow(lambda: main_master.SshDirect.execute("journalctl --since='1 min ago' | grep 'restart without'"))
     main_master.SshDirect.execute(
         "curl -sfL https://get.k3s.io | sh -s - --node-name=k3s-master --disable='servicelb,traefik,local-storage,metrics-server'")
