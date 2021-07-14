@@ -1,7 +1,8 @@
 import os
 import boto3
 from automation_infra.utils import concurrently
-from functools import  partial
+from functools import partial
+
 
 def clear_bucket(boto3_client, bucket_name):
     boto3_client.delete_bucket(Bucket=bucket_name)
@@ -12,6 +13,7 @@ def clear_all_buckets(boto3_client):
     jobs = {f"delete-job-{bucket}": partial(boto3_client.delete_bucket, Bucket=bucket) for bucket in bucket_names}
     if len(jobs) > 0:
         concurrently.run(jobs)
+
 
 def download_file_to_filesystem(boto3_client, remote_path, local_dir=".", bucketname="anyvision-testing"):
     if not os.path.exists(local_dir):
