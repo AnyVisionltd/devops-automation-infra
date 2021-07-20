@@ -61,6 +61,12 @@ def is_deployment_ready(client, name, namespace='default'):
     return deployment.status.replicas == deployment.status.ready_replicas
 
 
+def is_daemon_set_ready(client, name, namespace='default'):
+    v1 = kubernetes.client.AppsV1Api(client)
+    ds = v1.read_namespaced_daemon_set(name=name, namespace=namespace)
+    return ds.status.desired_number_scheduled == ds.status.number_ready
+
+
 def pod_exec(kubectl_client, namespace, name, command, executable="/bin/bash"):
     corev1api = kubernetes.client.CoreV1Api(kubectl_client)
     response = stream(corev1api.connect_get_namespaced_pod_exec,
@@ -220,3 +226,10 @@ def taint_node(client, node_name, taints):
     }
 
     v1.patch_node(node_name, body)
+
+
+def delete_pods_by_label(client, label, namespace="default"):
+    pods_to_delete = [pod.metadata.name for pod in get_pods_by_label(client, label=label, namespace=namespace)]
+    v1 = kubernetes.client.CoreV1Api(client)
+    for pod in pods_to_delete:
+        v1.delete_namespaced_pod(name=pod, namespace=namespace)
