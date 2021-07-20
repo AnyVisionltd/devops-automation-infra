@@ -8,6 +8,7 @@ from devops_automation_infra.k8s_plugins.kubectl import Kubectl
 from devops_automation_infra.utils import container
 from devops_automation_infra.utils import kubectl
 
+
 class Consul(object):
     def __init__(self, cluster):
         self._cluster = cluster
@@ -29,7 +30,11 @@ class Consul(object):
         return consul.Consul(host, port)
 
     def clear_data(self):
-        kubectl.delete_stateful_set_data(self._cluster.Kubectl.client(), self.NAME)
+        client = self._cluster.Kubectl.client()
+        kubectl.delete_stateful_set_data(client, self.NAME)
+        kubectl.delete_pods_by_label(client, label="app=consul, component=client")
+        waiter.wait_for_predicate(lambda: kubectl.is_daemon_set_ready(client, "consul"), timeout=60)
+
 
 cluster_plugins.register('Consul', Consul)
 
