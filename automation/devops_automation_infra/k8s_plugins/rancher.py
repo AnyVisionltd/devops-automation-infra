@@ -62,8 +62,8 @@ class Rancher:
 
     def clear_cache(self):
         remove_cache_cmd = "rm -rf management-state/catalog-cache/*"
-        rancher_pod_name = kubectl_utils.get_pods_by_label(self._cluster.Kubectl.client(),
-                                                           namespace="cattle-system", label="app=rancher")[0].metadata.name
+        rancher_pod_name = [pod for pod in kubectl_utils.get_pods_by_label(self._cluster.Kubectl.client(), namespace="cattle-system", label="app=rancher")
+                            if pod.status.phase == "Running"][0].metadata.name
         return kubectl_utils.pod_exec(self._cluster.Kubectl.client(), namespace="cattle-system",
                                       name=rancher_pod_name, command=remove_cache_cmd)
 
