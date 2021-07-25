@@ -107,6 +107,7 @@ def delete_pvc(client, name, namespace='default', clear_data=False):
 
 def delete_stateful_set_data(client, name, namespace='default', clear_data=False, timeout=60):
     v1_app = kubernetes.client.AppsV1Api(client)
+    v1_core = kubernetes.client.CoreV1Api(client)
     sts_spec = v1_app.read_namespaced_stateful_set(name=name, namespace=namespace).spec
     replicas = sts_spec.replicas
 
@@ -121,6 +122,8 @@ def delete_stateful_set_data(client, name, namespace='default', clear_data=False
 
     for pvc in pvcs_to_delete:
         delete_pvc(client, pvc, namespace, clear_data)
+        waiter.wait_for_predicate(lambda: pvc not in [pvc_object.metadata.name for pvc_object in v1_core.list_namespaced_persistent_volume_claim(namespace).items],
+                                  timeout=10, interval=0.5)
 
     scale_stateful_set(client, replicas, name, namespace, timeout=timeout)
     waiter.wait_for_predicate(lambda: is_stateful_set_ready(client, name), timeout=timeout)
