@@ -5,7 +5,9 @@ from automation_infra.plugins.ssh_direct import SSHCalledProcessError
 from devops_automation_infra.plugins.tunnel_manager import TunnelManager
 from devops_automation_infra.k8s_plugins.k8s_master import K8SMaster
 from infra.model import cluster_plugins
-from  automation_infra.utils import waiter
+from automation_infra.utils import waiter
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 
 class Kubectl:
@@ -15,7 +17,7 @@ class Kubectl:
 
     @property
     def _master(self):
-        return  self._cluster.K8SMaster()
+        return self._cluster.K8SMaster()
 
     @property
     def _tunnel(self):
@@ -45,11 +47,13 @@ class Kubectl:
         ssh = self._master.SshDirect
         try:
             ssh.execute("sudo kubectl create sa automation-admin")
-            ssh.execute("sudo kubectl create clusterrolebinding automation-admin --serviceaccount=default:automation-admin --clusterrole=cluster-admin")
+            ssh.execute(
+                "sudo kubectl create clusterrolebinding automation-admin --serviceaccount=default:automation-admin --clusterrole=cluster-admin")
         except SSHCalledProcessError as e:
             pass
 
-        get_sa_token = lambda: ssh.execute('''sudo kubectl get secrets -n default -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='automation-admin')].data.token}"|base64 --decode''').strip()
+        get_sa_token = lambda: ssh.execute(
+            '''sudo kubectl get secrets -n default -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='automation-admin')].data.token}"|base64 --decode''').strip()
         waiter.wait_for_predicate(get_sa_token, timeout=30)
         self._api_token = get_sa_token()
 
@@ -63,6 +67,13 @@ class Kubectl:
         for i in res.items:
             print("%s\t%s\t%s" % (i.status.pod_ip, i.metadata.namespace, i.metadata.name))
 
+    def delete_pod(self, pod_prefix):
+        ssh = self._master.SshDirect
+        try:
+            command_suffix = "| awk '{print $1}' | xargs kubectl delete pod"
+            ssh.execute(f'sudo kubectl get pods | grep -i {pod_prefix} {command_suffix}')
+        except SSHCalledProcessError as e:
+            pass
+
 
 cluster_plugins.register('Kubectl', Kubectl)
-
