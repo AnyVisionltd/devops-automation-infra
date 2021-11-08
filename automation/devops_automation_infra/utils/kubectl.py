@@ -111,7 +111,7 @@ def delete_stateful_set_data(client, name, namespace='default', clear_data=False
     sts_spec = v1_app.read_namespaced_stateful_set(name=name, namespace=namespace).spec
     replicas = sts_spec.replicas
 
-    scale_stateful_set(client, 0, name, namespace)
+    scale_stateful_set(client, 0, name, namespace, timeout=timeout)
 
     claim_templates = [volume.metadata.name for volume in sts_spec.volume_claim_templates]
     pvcs_to_delete = []
