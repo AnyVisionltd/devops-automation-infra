@@ -12,6 +12,7 @@ class Kubectl:
     def __init__(self, cluster):
         self._cluster = cluster
         self._api_token = None
+        self._k3d_port = '6443'
 
     @property
     def _master(self):
@@ -25,13 +26,24 @@ class Kubectl:
         tunnel = self._master.TunnelManager.get_or_create('kubectl', svc_ip, svc_port, ssh.get_transport())
         return tunnel
 
+    def _is_k3d(self):
+        ssh = self._master.SshDirect
+        try:
+            ssh.execute("docker ps | grep k3s > /dev/null 2>&1")
+            return True
+        except SSHCalledProcessError:
+            return False
+
     def _create_config(self, **kwargs):
         ssh = self._master.SshDirect
         self._create_service_account()
         api_token = self._api_token
-        tunnel = self._tunnel
         config = kubernetes.client.Configuration()
-        config.host = f"https://{tunnel.local_endpoint}"
+        if self._is_k3d():
+            config.host = f"https://{self._master}:{self._k3d_port}"
+        else:
+            tunnel = self._tunnel
+            config.host = f"https://{tunnel.local_endpoint}"
         config.verify_ssl = kwargs.pop("verify_ssl", False)
         config.api_key["authorization"] = api_token
         config.api_key_prefix['authorization'] = 'Bearer'
