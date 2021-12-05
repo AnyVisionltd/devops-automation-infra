@@ -12,6 +12,7 @@ from automation_infra.plugins.ssh_direct import SshDirect
 from devops_automation_infra.utils import kubectl
 from devops_automation_infra.installers import k8s
 
+K3S_VERSION='v1.21.5+k3s2'
 
 @gossip.register('session', tags=['k3s', 'devops_k3s'])
 def setup_cluster(cluster, request):
@@ -30,10 +31,10 @@ def setup_cluster(cluster, request):
     main_master.k8s_name = "k3s-master"
 
     main_master.SshDirect.execute(
-        "curl -sfL https://get.k3s.io | sh -s - --cluster-init --cluster-reset --cluster-reset-restore-path=/root/k3s-infra-1174-snapshot || true")
+        f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION} sh -s - --cluster-init --cluster-reset --cluster-reset-restore-path=/root/k3s-infra-1174-snapshot || true")
     waiter.wait_nothrow(lambda: main_master.SshDirect.execute("journalctl --since='1 min ago' | grep 'restart without'"))
     main_master.SshDirect.execute(
-        "curl -sfL https://get.k3s.io | sh -s - --node-name=k3s-master --disable='servicelb,traefik,local-storage,metrics-server'")
+        f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION}  sh -s - --node-name=k3s-master --disable='servicelb,traefik,local-storage,metrics-server'")
 
     main_master.SshDirect.execute("sudo chmod o+r /etc/rancher/k3s/k3s.yaml")
     cluster_token = main_master.SshDirect.execute("sudo cat /var/lib/rancher/k3s/server/token").strip()
@@ -65,13 +66,13 @@ def setup_cluster(cluster, request):
 
 
 def _join_agent(host, cluster_ip, cluster_token):
-    join_cmd = f"curl -sfL https://get.k3s.io | K3S_URL=https://{cluster_ip}:6443 K3S_TOKEN={cluster_token} sh -s -"
+    join_cmd = f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION}  K3S_URL=https://{cluster_ip}:6443 K3S_TOKEN={cluster_token} sh -s -"
     host.SshDirect.execute(join_cmd)
     waiter.wait_nothrow(lambda: host.SshDirect.execute("systemctl is-active --quiet k3s-agent"), timeout=60)
 
 
 def _join_master(host, cluster_ip, cluster_token):
-    join_cmd = f"curl -sfL https://get.k3s.io | K3S_URL=https://{cluster_ip}:6443 K3S_TOKEN={cluster_token} sh -s - server || true"
+    join_cmd = f"curl -sfL https://get.k3s.io |INSTALL_K3S_VERSION={K3S_VERSION}  K3S_URL=https://{cluster_ip}:6443 K3S_TOKEN={cluster_token} sh -s - server || true"
     ssh = host.SshDirect
     ssh.execute("sudo systemctl stop k3s")
     ssh.execute("sudo rm -rf /var/lib/rancher/k3s/server")
