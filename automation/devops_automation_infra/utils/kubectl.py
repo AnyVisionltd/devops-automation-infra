@@ -23,6 +23,13 @@ def get_stateful_set(client, name, namespace="default"):
     v1 = kubernetes.client.AppsV1Api(client)
     return v1.read_namespaced_stateful_set(name=name, namespace=namespace)
 
+def get_deployment(client, name, namespace="default"):
+    v1 = kubernetes.client.AppsV1Api(client)
+    return v1.read_namespaced_deployment(name=name, namespace=namespace)
+
+def get_config_map_envs(client, name, namespace="default"):
+    v1 = kubernetes.client.CoreV1Api(client)
+    return  v1.read_namespaced_config_map(name, namespace).data
 
 def create_generic_secret(client, name, data, namespace='default', type='Opaque'):
     v1 = kubernetes.client.CoreV1Api(client)
