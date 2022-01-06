@@ -22,7 +22,10 @@ class Redis(object):
     @property
     def _redis(self):
         return self.create_client()
-    
+
+    def get_keys(self, pattern="*"):
+        return [k.decode("utf-8") for k in self._redis.keys(pattern)]
+
     def set_key(self, key, value):
         return self._redis.set(key, value)
 
