@@ -33,7 +33,6 @@ def delete_pipeline_partitions(connection, pipeline, *partitions):
 
 
 def reset_pipeline(connection, pipeline_name):
-    import pdb; pdb.set_trace()
     logging.debug(f'Reset pipeline {pipeline_name}')
 
     try:
