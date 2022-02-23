@@ -1,6 +1,10 @@
 from infra.model import cluster_plugins
 from devops_automation_infra.utils import s3
 import boto3
+from devops_automation_infra.k8s_plugins.kubectl import Kubectl
+from devops_automation_infra.utils import kubectl
+
+import kubernetes
 
 
 class Seaweed:
@@ -21,8 +25,15 @@ class Seaweed:
 
     def create_client(self):
         host, port = self._tunnel.host_port
+
+        aws_secret_access_key = kubectl.get_secret_data(self._cluster.Kubectl.client(), 'default',
+                                                        'seaweedfs-s3-secret', 'admin_secret_access_key').decode()
+        aws_access_key_id = kubectl.get_secret_data(self._cluster.Kubectl.client(), 'default',
+                                                    'seaweedfs-s3-secret', 'admin_access_key_id').decode()
+
         return boto3.client('s3', endpoint_url=f"http://{host}:{port}",
-                          aws_secret_access_key='any',
-                          aws_access_key_id='any')
+                            aws_secret_access_key=aws_secret_access_key,
+                            aws_access_key_id=aws_access_key_id)
+
 
 cluster_plugins.register('Seaweed', Seaweed)
