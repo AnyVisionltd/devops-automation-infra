@@ -21,8 +21,10 @@ class Kubectl:
     @property
     def _tunnel(self):
         ssh = self._master.SshDirect
-        svc_ip = ssh.execute('sudo kubectl get svc kubernetes -o jsonpath={.spec.clusterIP}')
-        svc_port = ssh.execute('sudo kubectl get svc kubernetes -o jsonpath={.spec.ports[0].port}')
+        #svc_ip = ssh.execute('sudo kubectl get svc kubernetes -o jsonpath={.spec.clusterIP}')
+        #svc_port = ssh.execute('sudo kubectl get svc kubernetes -o jsonpath={.spec.ports[0].port}')
+        svc_ip = "127.0.0.1"
+        svc_port = 6443
         tunnel = self._master.TunnelManager.get_or_create('kubectl', svc_ip, svc_port, ssh.get_transport())
         return tunnel
 
