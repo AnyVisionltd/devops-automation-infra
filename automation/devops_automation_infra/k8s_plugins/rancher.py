@@ -126,7 +126,7 @@ class Rancher:
             if wait:
                 self.wait_for_app(app_name, timeout)
             # Due to Rancher bug when app shows it's active few seconds after deployment
-            time.sleep(10)
+            time.sleep(15)
 
     def delete_app(self, app_name):
         self.cli_execute(f"rancher app delete {app_name}")
