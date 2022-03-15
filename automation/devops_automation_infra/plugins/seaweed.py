@@ -14,10 +14,14 @@ class Seaweed(ResourceManager):
     def __init__(self, host):
         super().__init__(host)
         self._host = host
-        self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-s3.default.svc.cluster.local'
-        self.filer_host = 'seaweedfs-filer-localnode.tls.ai' if not helpers.is_k8s(self._host.SshDirect) else 'seaweedfs-filer.default.svc.cluster.local'
+        self.DNS_NAME = 'seaweedfs-s3-localnode.tls.ai' if not helpers.is_k8s(
+            self._host.SshDirect) else 'seaweedfs-s3.default.svc.cluster.local'
+        self.filer_host = 'seaweedfs-filer-localnode.tls.ai' if not helpers.is_k8s(
+            self._host.SshDirect) else 'seaweedfs-filer.default.svc.cluster.local'
         self.filer_port = 8888
         self.PORT = 8333
+        self.S3_ACCESS_KEY_ID = "jJ6O9RGc9uzQgohF"
+        self.S3_SECRET_ACCESS_KEY = "ks4e3guPJiUvMnV95xSbU3xl8sPgX3Mo"
 
     @property
     def tunnel(self):
@@ -45,13 +49,13 @@ class Seaweed(ResourceManager):
 
     def _s3_client(self):
         return boto3.client('s3', endpoint_url=self._endpoint_uri(),
-                          aws_secret_access_key='any',
-                          aws_access_key_id='any')
+                            aws_secret_access_key=self.S3_SECRET_ACCESS_KEY,
+                            aws_access_key_id=self.S3_ACCESS_KEY_ID)
 
     def _s3_resource(self):
         return boto3.resource('s3', endpoint_url=self._endpoint_uri(),
-                          aws_secret_access_key='any',
-                          aws_access_key_id='any')
+                              aws_secret_access_key=self.S3_SECRET_ACCESS_KEY,
+                              aws_access_key_id=self.S3_ACCESS_KEY_ID)
 
     def ping(self):
         self.get_all_buckets()
@@ -81,7 +85,7 @@ class Seaweed(ResourceManager):
             "(echo 'lock;'; cat -; echo ''; echo 'unlock;')",
             weed_shell
         ])
-        
+
         logging.info(f"weed_delete_cmd: {weed_delete_cmd}")
         self._host.Docker.run_cmd_in_service('seaweedfs-master_', weed_delete_cmd)
 
@@ -117,8 +121,8 @@ class Seaweed(ResourceManager):
         parts = []
         for i, chunk in enumerate(s3_data_stream):
             part = self.client.upload_part(Bucket=bucket, Key=s3_path,
-                                       PartNumber=i, UploadId=uploader['UploadId'],
-                                       Body=chunk)
+                                           PartNumber=i, UploadId=uploader['UploadId'],
+                                           Body=chunk)
             parts.append({"PartNumber": i, "ETag": part["ETag"]})
 
         result = self.client.complete_multipart_upload(Bucket=bucket,
@@ -138,7 +142,7 @@ class Seaweed(ResourceManager):
         resources_s3_list = []
         for resource in aws_file_list:
             resources_s3_list.append(
-            self.deploy_resource_to_s3(os.path.join(aws_folder, resource), os.path.join(s3_folder, resource)))
+                self.deploy_resource_to_s3(os.path.join(aws_folder, resource), os.path.join(s3_folder, resource)))
         return resources_s3_list
 
     def stop_service(self):
