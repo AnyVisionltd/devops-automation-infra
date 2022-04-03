@@ -6,6 +6,13 @@ from functools import  partial
 def clear_bucket(boto3_client, bucket_name):
     boto3_client.delete_bucket(Bucket=bucket_name)
 
+def file_exists(boto3_client, bucket_name,file_name):
+    try:
+        boto3_client.get_object(Bucket=bucket_name, Key=file_name)
+    except Exception :
+        return False
+    else:
+        return True
 
 def clear_all_buckets(boto3_client):
     bucket_names = [bucket['Name'] for bucket in boto3_client.list_buckets()['Buckets']]
