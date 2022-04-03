@@ -37,7 +37,8 @@ def clean(cluster, request):
     logging.info("running devops clean_base_btwn_tests")
     cluster.ProxyDaemonSet.restart()
     for host in cluster.hosts.values():
-        waiter.wait_nothrow(host.SSH.connect, timeout=30)
+        if host.user != 'oosto':
+            waiter.wait_nothrow(host.SSH.connect, timeout=30)
 
 
 @gossip.register('teardown', tags=['k8s', 'devops_k8s'])
