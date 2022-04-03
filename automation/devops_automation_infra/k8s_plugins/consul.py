@@ -16,6 +16,9 @@ class Consul(object):
         self.DNS_NAME = f'{self.NAME}.default.svc.cluster.local'
         self.URI = "/consul"
         self.PORT = 8500
+        self.DEFAULT_KEY = "DEFAULT"
+        self.OVERRIDE_KEY = "OVERRIDE"
+        self.APPLICATION_KEY = "APPLICATION"
 
     @property
     def _master(self):
