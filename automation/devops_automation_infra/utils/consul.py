@@ -1,14 +1,26 @@
+import json
 import os
 import pickle
 import logging
 from automation_infra.plugins.ssh_direct import SSHCalledProcessError
 import consul
 
+
 def get_services(client):
     return client.catalog.services()[1]
 
+
 def get_service_nodes(client, service_name):
     return client.catalog.service(service_name)[1]
+
+
+def is_healthy(client, service_name, instance_name):
+    nodes = client.health.service(service_name)[1]
+    for node in nodes:
+        if node["Service"]["ID"] == instance_name:
+            return "critical" not in [check["Status"] for check in node["Checks"]]
+    return False
+
 
 def backup_consul_keys(host):
     try:
@@ -44,3 +56,17 @@ def backup_consul_keys(host):
 
     except Exception as e:
         raise Exception(f"Error while backup consul keys, {e}")
+
+
+def get_key(client, key):
+    res = client.kv.get(key)[1]['Value']
+    return res
+
+
+def put_key(client, key, value):
+    if isinstance(value, dict):
+        value = json.dumps(value)
+    else:
+        value = str(value)
+    res = client.kv.put(key, value)
+    return res
