@@ -2,6 +2,8 @@ import os
 import boto3
 from automation_infra.utils import concurrently
 from functools import  partial
+import logging
+from devops_automation_infra.utils import s3, aws_s3
 
 def clear_bucket(boto3_client, bucket_name):
     boto3_client.delete_bucket(Bucket=bucket_name)
@@ -13,6 +15,36 @@ def file_exists(boto3_client, bucket_name,file_name):
         return False
     else:
         return True
+
+def bulk_upload_to_seaweed_from_s3(boto3_client, aws_folder, images_name):
+    resources_s3_list = []
+    for image in images_name:
+        resources_s3_list.append(
+            upload_to_seaweed_from_s3(boto3_client,aws_folder,image))
+    return resources_s3_list
+
+def upload_to_seaweed_from_s3(boto3_client, aws_folder, image_name, chunk_size=100 * 1024 * 1024):
+    resource_path = os.path.join(aws_folder, image_name)
+    bucket = "automation_infra"
+    aws_s3_client = aws_s3.create_aws_s3_connection()
+    uploader = boto3_client.create_multipart_upload(Bucket=bucket, Key=image_name)
+    s3_object = aws_s3_client.get_object(Bucket="anyvision-testing", Key=resource_path)
+    # Lets do 4MB chunks
+    s3_data_stream = s3_object['Body'].iter_chunks(chunk_size=chunk_size)
+
+    parts = []
+    for i, chunk in enumerate(s3_data_stream):
+        part = boto3_client.upload_part(Bucket=bucket, Key=resource_path,
+                                       PartNumber=i, UploadId=uploader['UploadId'],
+                                       Body=chunk)
+        parts.append({"PartNumber": i, "ETag": part["ETag"]})
+
+    result = boto3_client.complete_multipart_upload(Bucket=bucket,
+                                                   Key=resource_path,
+                                                   UploadId=uploader['UploadId'],
+                                                   MultipartUpload={"Parts": parts})
+    logging.debug(f"upload result to {bucket}/{resource_path} is {result}")
+    return f'{bucket}/{resource_path}'
 
 def clear_all_buckets(boto3_client):
     bucket_names = [bucket['Name'] for bucket in boto3_client.list_buckets()['Buckets']]
