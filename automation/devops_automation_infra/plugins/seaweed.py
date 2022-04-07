@@ -45,13 +45,13 @@ class Seaweed(ResourceManager):
 
     def _s3_client(self):
         return boto3.client('s3', endpoint_url=self._endpoint_uri(),
-                          aws_secret_access_key='any',
-                          aws_access_key_id='any')
+                          aws_secret_access_key='ks4e3guPJiUvMnV95xSbU3xl8sPgX3Mo',
+                          aws_access_key_id='jJ6O9RGc9uzQgohF')
 
     def _s3_resource(self):
         return boto3.resource('s3', endpoint_url=self._endpoint_uri(),
-                          aws_secret_access_key='any',
-                          aws_access_key_id='any')
+                          aws_secret_access_key='ks4e3guPJiUvMnV95xSbU3xl8sPgX3Mo',
+                          aws_access_key_id='jJ6O9RGc9uzQgohF')
 
     def ping(self):
         self.get_all_buckets()
