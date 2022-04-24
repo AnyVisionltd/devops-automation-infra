@@ -39,7 +39,7 @@ class K8s(object):
         return json.loads(res)
 
     def get_resource(self, name, resource_type, options=""):
-        res = self._host.SshDirect.execute(f"sudo gravity exec kubectl get {resource_type} {name} {options} --output json")
+        res = self._host.SshDirect.execute(f"sudo kubectl get {resource_type} {name} {options} --output json")
         return json.loads(res)
 
     def apply(self, command=""):
