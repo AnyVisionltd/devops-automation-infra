@@ -141,7 +141,7 @@ services:
     - MEMSQL_PASSWORD=password
     - AGG_MEMORY_LIMIT=4
     - LEAF_MEMORY_LIMIT=124
-    image: gcr.io/anyvision-training/memsql:20.04
+    image: gcr.io/anyvision-training/memsql:7.3.23
     logging:
       options:
         max-size: 1g
@@ -187,7 +187,7 @@ services:
     - PG_MAX_CPU=8
     - PG_LOG_MIN_DURATION_STATEMENT=250
     - POSTGRES_PASSWORD=password
-    image: gcr.io/anyvision-training/postgres:20.02
+    image: gcr.io/anyvision-training/postgres:13.5
     logging:
       options:
         max-size: 1g
