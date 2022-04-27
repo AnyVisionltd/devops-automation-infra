@@ -30,6 +30,7 @@ def pytest_after_proxy_container(base_config, request):
         host.DockerCompose.put_yaml(local_yaml_path, remote_compose_dir)
         remote_compose_yaml_path = os.path.join(remote_compose_dir, os.path.basename(local_yaml_path))
         ComposeManager.pull_and_up(host, remote_compose_yaml_path)
-        waiter.wait_for_predicates(host.Postgresql.ping, host.Memsql.ping, host.Consul.ping)
+        import ipdb;ipdb.set_trace()
+        waiter.wait_for_predicates(host.Postgresql.ping, host.Memsql.ping, host.Consul.ping, timeout=120)
 
     logging.info("devops install finished!")
