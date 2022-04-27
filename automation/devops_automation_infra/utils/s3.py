@@ -79,11 +79,8 @@ def download_files_to_filesystem(boto3_client, remote_files, local_dir=".", buck
 
 def get_bucket_key_from_path(path):
     full_path = path.replace('s3://', '/')
-    start = 0
-    comp = full_path.find('/', start)
-    if comp == 0:
-        start = 1
-        comp = full_path.find('/', start)
-    bucket = full_path[start: comp]
-    key = full_path[comp + 1:]
+    start = 1
+    bucket_key_separator = full_path.find('/', start)
+    bucket = full_path[start: bucket_key_separator]
+    key = full_path[bucket_key_separator + 1:]
     return bucket, key
