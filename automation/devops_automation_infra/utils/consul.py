@@ -63,6 +63,24 @@ def get_key(client, key):
     return res
 
 
+def get_key_layered(client, service_name, key):
+    layers_read_order = [client.OVERRIDE_KEY, client.APPLICATION_KEY, client.DEFAULT_KEY]
+    for layer in layers_read_order:
+        layered_key = f"{layer}/{service_name}/{key}"
+        value = client.kv.get(layered_key)[1]
+        if value is not None:
+            return value['Value']
+    return None
+
+
+def get_key_if_exists(client, key):
+    value = None
+    res = client.kv.get(key)[1]
+    if res is not None:
+        value = res['Value']
+    return value
+
+
 def put_key(client, key, value):
     if isinstance(value, dict):
         value = json.dumps(value)
