@@ -44,14 +44,16 @@ class Seaweed(ResourceManager):
         return f'http://{host}:{port}'
 
     def _s3_client(self):
+        env_s3 = self._host.Docker.container_envs('nginx-s3')
         return boto3.client('s3', endpoint_url=self._endpoint_uri(),
-                          aws_secret_access_key='ks4e3guPJiUvMnV95xSbU3xl8sPgX3Mo',
-                          aws_access_key_id='jJ6O9RGc9uzQgohF')
+                            aws_secret_access_key=env_s3['aws_secret_key'],
+                            aws_access_key_id=env_s3['aws_access_key'])
 
     def _s3_resource(self):
-        return boto3.resource('s3', endpoint_url=self._endpoint_uri(),
-                          aws_secret_access_key='ks4e3guPJiUvMnV95xSbU3xl8sPgX3Mo',
-                          aws_access_key_id='jJ6O9RGc9uzQgohF')
+        env_s3 = self._host.Docker.container_envs('nginx-s3')
+        return boto3.client('s3', endpoint_url=self._endpoint_uri(),
+                            aws_secret_access_key=env_s3['aws_secret_key'],
+                            aws_access_key_id=env_s3['aws_access_key'])
 
     def ping(self):
         self.get_all_buckets()
