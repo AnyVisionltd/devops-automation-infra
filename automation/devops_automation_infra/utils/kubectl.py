@@ -119,19 +119,18 @@ def delete_stateful_set_data(client, name, namespace='default', clear_data=False
     replicas = sts_spec.replicas
 
     scale_stateful_set(client, 0, name, namespace, timeout=timeout)
+    if sts_spec.volume_claim_templates:
+        claim_templates = [volume.metadata.name for volume in sts_spec.volume_claim_templates]
+        pvcs_to_delete = []
 
-    claim_templates = [volume.metadata.name for volume in sts_spec.volume_claim_templates]
-    pvcs_to_delete = []
+        for template in claim_templates:
+            for i in range(0, replicas):
+                pvcs_to_delete.append(f"{template}-{name}-{i}")
 
-    for template in claim_templates:
-        for i in range(0, replicas):
-            pvcs_to_delete.append(f"{template}-{name}-{i}")
-
-    for pvc in pvcs_to_delete:
-        delete_pvc(client, pvc, namespace, clear_data)
-        waiter.wait_for_predicate(lambda: pvc not in [pvc_object.metadata.name for pvc_object in v1_core.list_namespaced_persistent_volume_claim(namespace).items],
-                                  timeout=10, interval=0.5)
-
+        for pvc in pvcs_to_delete:
+            delete_pvc(client, pvc, namespace, clear_data)
+            waiter.wait_for_predicate(lambda: pvc not in [pvc_object.metadata.name for pvc_object in v1_core.list_namespaced_persistent_volume_claim(namespace).items],
+                                      timeout=10, interval=0.5)
     scale_stateful_set(client, replicas, name, namespace, timeout=timeout)
     waiter.wait_for_predicate(lambda: is_stateful_set_ready(client, name), timeout=timeout)
 

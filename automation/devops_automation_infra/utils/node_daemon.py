@@ -1,9 +1,10 @@
 import json
 import logging
 
+import common_pb2
 from devops_automation_infra.utils import consul
 from pipeng.utils import tracks
-from pipeng.services import pipe
+from pipeng.services import pipe as pipe_service
 from devops_automation_infra.k8s_plugins.consul import Consul
 from devops_automation_infra.k8s_plugins.kafka import Kafka
 
@@ -40,3 +41,24 @@ def get_consul_value(cluster, key):
 
 def scale_node_daemon_pod_to_x(cluster, replicas):
     return cluster.hosts.host1.K8s.scale(f"node-daemon", replicas=replicas)
+
+
+def create_stream_settings_for_jetson():
+    stream_config = pipe_service.create_stream_config(flow_type=common_pb2.FACE, **{
+        "association_threshold": 0.5,
+        "auto_skip_enabled": True,
+        "rotation_angle": -1,
+        "tracker_face_min_track_length": 1,
+        "tracker_face_max_track_length": 200,
+        "tracker_face_lost_threshold": 45,
+        "detection_min_face_size": 48,
+        "detection_max_face_size": -1,
+        "detection_min_body_size": 20,
+        "detection_max_body_size": -1,
+        "tracker_body_min_track_length": 4,
+        "tracker_body_max_track_length": 200,
+        "tracker_body_lost_threshold": 45,
+        "camera_group_id": "00000000-0200-4c1b-4e12-1ba74bff4a4b",
+        "enable_frame_storage": True
+    })
+    return stream_config
