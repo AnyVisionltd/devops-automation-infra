@@ -50,8 +50,7 @@ class ProxyDaemonSet(object):
             res = self._k8s_v1_client.create_namespaced_daemon_set(namespace="default", body=ds_yaml)
         except ApiException as e:
             logging.exception("Exception when calling AppsV1Api->create_namespaced_daemon_set: %s\n" % e)
-
-        num_of_hosts = len([host for name, host in self._cluster.hosts.items() if host.user != 'oosto'])
+        num_of_hosts = len([host for name, host in self._cluster.hosts.items() if host.arch != 'arm64'])
         waiter.wait_for_predicate(lambda: self._num_ready_pods() == num_of_hosts, timeout=120)
         logging.debug(f"Deployment created. status={res.metadata.name}")
 

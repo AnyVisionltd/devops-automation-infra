@@ -37,7 +37,7 @@ def clean(cluster, request):
     logging.info("running devops clean_base_btwn_tests")
     cluster.ProxyDaemonSet.restart()
     for host in cluster.hosts.values():
-        if host.user != 'oosto':
+        if host.arch != 'arm64':
             waiter.wait_nothrow(host.SSH.connect, timeout=30)
 
 
