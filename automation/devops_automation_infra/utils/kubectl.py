@@ -246,7 +246,6 @@ def delete_pods_by_label(client, label, namespace="default"):
 
 def edit_statefulset(client, name, namespace='default', new_env_var=None):
     v1_app = kubernetes.client.AppsV1Api(client)
-    v1_app.read_namespaced_stateful_set(name, namespace)
     sts_info = v1_app.read_namespaced_stateful_set(name=name, namespace=namespace)
     sts_info.spec.template.spec.containers[0].env.append(new_env_var)
     v1_app.replace_namespaced_stateful_set(name, namespace, sts_info)
