@@ -23,13 +23,16 @@ def get_stateful_set(client, name, namespace="default"):
     v1 = kubernetes.client.AppsV1Api(client)
     return v1.read_namespaced_stateful_set(name=name, namespace=namespace)
 
+
 def get_deployment(client, name, namespace="default"):
     v1 = kubernetes.client.AppsV1Api(client)
     return v1.read_namespaced_deployment(name=name, namespace=namespace)
 
+
 def get_config_map_envs(client, name, namespace="default"):
     v1 = kubernetes.client.CoreV1Api(client)
-    return  v1.read_namespaced_config_map(name, namespace).data
+    return v1.read_namespaced_config_map(name, namespace).data
+
 
 def create_generic_secret(client, name, data, namespace='default', type='Opaque'):
     v1 = kubernetes.client.CoreV1Api(client)
@@ -129,7 +132,9 @@ def delete_stateful_set_data(client, name, namespace='default', clear_data=False
 
         for pvc in pvcs_to_delete:
             delete_pvc(client, pvc, namespace, clear_data)
-            waiter.wait_for_predicate(lambda: pvc not in [pvc_object.metadata.name for pvc_object in v1_core.list_namespaced_persistent_volume_claim(namespace).items],
+            waiter.wait_for_predicate(lambda: pvc not in [pvc_object.metadata.name for pvc_object in
+                                                          v1_core.list_namespaced_persistent_volume_claim(
+                                                              namespace).items],
                                       timeout=10, interval=0.5)
     scale_stateful_set(client, replicas, name, namespace, timeout=timeout)
     waiter.wait_for_predicate(lambda: is_stateful_set_ready(client, name), timeout=timeout)
@@ -220,6 +225,18 @@ def label_node(client, node_name, labels):
     v1.patch_node(node_name, body)
 
 
+def add_label_to_node(client, node_name, key, value):
+    v1 = kubernetes.client.CoreV1Api(client)
+    body = {
+        "metadata": {
+            "labels": {
+                key: value
+            }
+        }
+    }
+    v1.patch_node(node_name, body)
+
+
 def taint_node(client, node_name, taints):
     v1 = kubernetes.client.CoreV1Api(client)
     list_of_taints = []
@@ -250,3 +267,32 @@ def edit_statefulset(client, name, namespace='default', new_env_var=None):
     sts_info = v1_app.read_namespaced_stateful_set(name=name, namespace=namespace)
     sts_info.spec.template.spec.containers[0].env.append(new_env_var)
     v1_app.replace_namespaced_stateful_set(name, namespace, sts_info)
+
+
+def add_env_to_deployment(client, name, namespace='default', new_env_var=None):
+    v1_app = kubernetes.client.AppsV1Api(client)
+    v1_app.read_namespaced_deployment(name, namespace)
+    deployment_info = v1_app.read_namespaced_deployment(name=name, namespace=namespace)
+    deployment_info.spec.template.spec.containers[0].env.append(new_env_var)
+    v1_app.replace_namespaced_deployment(name, namespace, deployment_info)
+
+
+def change_env_from_deployment(client, name, env_name, namespace='default', new_env_var=None):
+    v1_app = kubernetes.client.AppsV1Api(client)
+    v1_app.read_namespaced_deployment(name, namespace)
+    deployment_info = v1_app.read_namespaced_deployment(name=name, namespace=namespace)
+    desired_env_index = -1
+    envs = deployment_info.spec.template.spec.containers[0].env
+    for index, env in enumerate(envs):
+        if env.name == env_name:
+            desired_env_index = index
+            break
+    envs[desired_env_index] = new_env_var
+    v1_app.replace_namespaced_deployment(name, namespace, deployment_info)
+
+def disable_liveness_probe(client, name, namespace='default'):
+    v1_app = kubernetes.client.AppsV1Api(client)
+    v1_app.read_namespaced_deployment(name, namespace)
+    deployment_info = v1_app.read_namespaced_deployment(name=name, namespace=namespace)
+    deployment_info.spec._template.spec.containers[0].liveness_probe = None
+    v1_app.replace_namespaced_deployment(name, namespace, deployment_info)
