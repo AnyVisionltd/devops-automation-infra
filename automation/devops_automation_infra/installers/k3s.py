@@ -10,6 +10,7 @@ from automation_infra.utils import concurrently, waiter
 from devops_automation_infra.k8s_plugins.kubectl import Kubectl
 from automation_infra.plugins.ssh_direct import SshDirect
 from devops_automation_infra.utils import kubectl
+from devops_automation_infra.k8s_plugins.rancher import Rancher
 from devops_automation_infra.installers import k8s
 
 K3S_VERSION='v1.19.11+k3s1'
@@ -64,13 +65,22 @@ def setup_cluster(cluster, request):
     logging.info("Adding node labels and taints")
     _label_and_taint_nodes(k8s_client, hosts)
 
-    # k8s.deploy_proxy_pod(cluster, request)
-
+    logging.info("Setting up rancher cli.. ")
+    setup_rancher(cluster)
 
 def _join_agent(host, cluster_ip, cluster_token):
     join_cmd = f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION}  K3S_URL=https://{cluster_ip}:6443 K3S_TOKEN={cluster_token} sh -s -"
     host.SshDirect.execute(join_cmd)
     waiter.wait_nothrow(lambda: host.SshDirect.execute("systemctl is-active --quiet k3s-agent"), timeout=60)
+
+
+def setup_rancher(cluster):
+    if cluster.Rancher.is_cert_expired():
+        logging.debug(f"Rancher certificate expired, waiting for certificate to be renewed..")
+        waiter.wait_for_predicate(lambda: not cluster.Rancher.is_cert_expired(), timeout=120)
+        cluster.Rancher.restart_pods()
+
+    waiter.wait_nothrow(cluster.Rancher.cli_login, timeout=180)
 
 
 def _join_master(host, cluster_ip, cluster_token):
