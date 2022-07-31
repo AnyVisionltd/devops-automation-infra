@@ -2,11 +2,12 @@ import json
 import logging
 import os
 import time
-
+from datetime import datetime
 import yaml
 import requests
 
 from automation_infra.plugins.ssh_direct import SSHCalledProcessError
+from automation_infra.utils import waiter
 from infra.model import cluster_plugins
 from devops_automation_infra.k8s_plugins.kubectl import Kubectl
 from devops_automation_infra.k8s_plugins.gravity import Gravity
@@ -46,6 +47,17 @@ class Rancher:
             return self._cluster.Gravity.exec(cmd)
 
         return ssh.execute(cmd)
+
+    def restart_pods(self):
+        k8s_client = self._cluster.Kubectl.client()
+        kubectl_utils.delete_pods_by_label(client=k8s_client, label="app=rancher", namespace="cattle-system")
+        waiter.wait_for_predicate(lambda: kubectl_utils.is_deployment_ready(client=k8s_client, name="rancher",
+        namespace="cattle-system") == True, timeout=120)
+
+    def is_cert_expired(self):
+        expiry_date = self._cluster.K8SMaster().SshDirect.execute(
+            "kubectl get certificate -n cattle-system tls-rancher-ingress -o jsonpath={.status.notAfter}")
+        return datetime.strptime(expiry_date, "%Y-%m-%dT%H:%M:%SZ") < datetime.now()
 
     def cli_login(self):
         cmd = f"rancher login https://{self.alias} --token {self.token} --skip-verify"
