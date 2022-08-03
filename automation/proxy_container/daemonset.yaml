@@ -34,8 +34,6 @@ spec:
           mountPath: /storage/logs
       tolerations:
       - operator: Exists # matches all keys, values and effects which means this will tolerate everything
-      nodeSelector:
-        node-role.kubernetes.io/master: "true"
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       terminationGracePeriodSeconds: 30
