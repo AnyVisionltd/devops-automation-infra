@@ -269,11 +269,12 @@ def edit_statefulset(client, name, namespace='default', new_env_var=None):
     v1_app.replace_namespaced_stateful_set(name, namespace, sts_info)
 
 
-def add_env_to_deployment(client, name, namespace='default', new_env_var=None):
+def add_env_to_deployment(client, name, namespace='default', envs=None):
     v1_app = kubernetes.client.AppsV1Api(client)
     v1_app.read_namespaced_deployment(name, namespace)
     deployment_info = v1_app.read_namespaced_deployment(name=name, namespace=namespace)
-    deployment_info.spec.template.spec.containers[0].env.append(new_env_var)
+    for env in envs:
+        deployment_info.spec.template.spec.containers[0].env.append(env)
     v1_app.replace_namespaced_deployment(name, namespace, deployment_info)
 
 
