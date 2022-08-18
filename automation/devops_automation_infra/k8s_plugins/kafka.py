@@ -71,7 +71,7 @@ class Kafka:
 
         logging.debug("Waiting for kafka brokers to restart")
         waiter.wait_for_predicate(lambda: self._kafka_brokers_restarted(pods_timestamps) is True, timeout=30)
-        waiter.wait_for_predicate(lambda: self._is_running is True, timeout=60)
+        waiter.wait_for_predicate(lambda: self._is_running is True, timeout=120)
 
     def _add_default_options(self, kwargs):
         options = {'bootstrap_servers': self._bootstrap_endpoint()}
