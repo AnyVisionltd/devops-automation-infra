@@ -9,6 +9,9 @@ def clear_bucket(boto3_client, bucket_name):
     boto3_client.delete_bucket(Bucket=bucket_name)
 
 
+def delete_file(boto3_client, bucket_name, filename):
+    boto3_client.delete_file(bucket_name, filename)
+
 def file_exists(boto3_client, bucket_name, file_name):
     try:
         boto3_client.get_object(Bucket=bucket_name, Key=file_name)
