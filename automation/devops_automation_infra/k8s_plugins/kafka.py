@@ -70,7 +70,7 @@ class Kafka:
                                                             body={'spec': kafka_spec})
 
         logging.debug("Waiting for kafka brokers to restart")
-        waiter.wait_for_predicate(lambda: self._kafka_brokers_restarted(pods_timestamps) is True, timeout=30)
+        waiter.wait_for_predicate(lambda: self._kafka_brokers_restarted(pods_timestamps) is True, timeout=70)
         waiter.wait_for_predicate(lambda: self._is_running is True, timeout=120)
 
     def _add_default_options(self, kwargs):
