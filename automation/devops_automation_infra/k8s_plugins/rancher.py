@@ -35,18 +35,21 @@ class Rancher:
     def _default_project_id(self):
         return self.project_details()["id"]
 
-    def cli_execute(self, cmd):
+    def cli_execute(self, cmd,timeout=1200):
         self.cli_login()
-        return self._execute(cmd)
+        return self._execute(cmd,timeout)
 
-    def _execute(self, cmd):
+    def _execute(self, cmd,timeout=None):
         ssh = self._cluster.K8SMaster().SshDirect
         try:
             ssh.execute("which rancher")
         except SSHCalledProcessError:
             return self._cluster.Gravity.exec(cmd)
+        if timeout is not None:
+            return ssh.execute(cmd,int(timeout))
+        else:
+            return ssh.execute(cmd)
 
-        return ssh.execute(cmd)
 
     def restart_pods(self):
         k8s_client = self._cluster.Kubectl.client()
@@ -101,7 +104,7 @@ class Rancher:
 
     def wait_for_app(self, app_name, timeout):
         logging.info(f"Waiting for application to be available. see {self.base_url} for status")
-        self.cli_execute(f"rancher wait {app_name} --timeout {timeout}")
+        self.cli_execute(f"rancher wait {app_name} --timeout {timeout}",timeout)
 
     def upgrade_app(self, app_name, version, wait=True, timeout="120", **kwargs):
         cmd_options = ""
