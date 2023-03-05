@@ -13,7 +13,7 @@ from devops_automation_infra.utils import kubectl
 from devops_automation_infra.k8s_plugins.rancher import Rancher
 from devops_automation_infra.installers import k8s
 
-K3S_VERSION='v1.19.11+k3s1'
+K3S_VERSION='v1.22.17+k3s1'
 
 @gossip.register('session', tags=['k3s', 'devops_k3s'])
 def setup_cluster(cluster, request):
@@ -22,6 +22,7 @@ def setup_cluster(cluster, request):
         host.k3s_config = config['k3s_config']
         host.internal_ip = host.SshDirect.execute("hostname -I | awk {'print $1'}").strip()
 
+    import pdb; pdb.set_trace()
     logging.info("Setting up k3s cluster")
     hosts = list(cluster.hosts.values())
     masters = [host for host in hosts if host.k3s_config["role"] == "master"]
@@ -32,13 +33,14 @@ def setup_cluster(cluster, request):
     main_master.k8s_name = "master1"
 
     main_master.SshDirect.execute(
-        f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION} sh -s - --cluster-init --cluster-reset --cluster-reset-restore-path=/root/k3s-infra-119-snapshot || true")
+        f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION} sh -s - --cluster-reset --cluster-reset-restore-path=/root/k3s-infra-200-snapshot || true")
     waiter.wait_nothrow(lambda: main_master.SshDirect.execute("journalctl --since='1 min ago' | grep 'restart without'"))
     time.sleep(15)
     main_master.SshDirect.execute(
-        f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION}  sh -s - --node-name={main_master.k8s_name} --disable='servicelb,traefik,local-storage,metrics-server'")
+        f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION}  sh -s - --secrets-encryption --node-name={main_master.k8s_name} --disable='servicelb,traefik,local-storage,metrics-server'")
+    main_master.SshDirect.execute("sudo chmod +r /etc/rancher/k3s/k3s.yaml")
 
-    main_master.SshDirect.execute("sudo cp /root/.kube/config ~/.kube/config && sudo chmod o+r ~/.kube/config")
+    # main_master.SshDirect.execute("sudo cp /root/.kube/config ~/.kube/config && sudo chmod o+r ~/.kube/config")
     cluster_token = main_master.SshDirect.execute("sudo cat /var/lib/rancher/k3s/server/token").strip()
     cluster_ip = main_master.SshDirect.execute("hostname -I").strip()
     waiter.wait_nothrow(lambda: main_master.SshDirect.execute("kubectl get nodes"))
@@ -65,8 +67,8 @@ def setup_cluster(cluster, request):
     logging.info("Adding node labels and taints")
     _label_and_taint_nodes(k8s_client, hosts)
 
-    logging.info("Setting up rancher cli.. ")
-    setup_rancher(cluster)
+    # logging.info("Setting up rancher cli.. ")
+    # setup_rancher(cluster)
 
 def _join_agent(host, cluster_ip, cluster_token):
     join_cmd = f"curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={K3S_VERSION}  K3S_URL=https://{cluster_ip}:6443 K3S_TOKEN={cluster_token} sh -s -"

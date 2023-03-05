@@ -57,6 +57,7 @@ class Kubectl:
         if self._api_token:
             return
         ssh = self._master.SshDirect
+        import pdb; pdb.set_trace()
         try:
             ssh.execute("sudo kubectl create sa automation-admin")
             ssh.execute("sudo kubectl create clusterrolebinding automation-admin --serviceaccount=default:automation-admin --clusterrole=cluster-admin")
@@ -64,7 +65,7 @@ class Kubectl:
             pass
 
         get_sa_token = lambda: ssh.execute('''sudo kubectl get secrets -n default -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='automation-admin')].data.token}"|base64 --decode''').strip()
-        waiter.wait_for_predicate(get_sa_token, timeout=30)
+        waiter.wait_for_predicate(get_sa_token, timeout=90)
         self._api_token = get_sa_token()
 
     def client(self, **kwargs):
