@@ -45,6 +45,7 @@ class Kafka:
 
     def _expose(self):
         # Checks if kafka is already exposed
+        import ipdb;ipdb.set_trace()
         if self._is_exposed:
             return
 
@@ -80,8 +81,11 @@ class Kafka:
 
     def _bootstrap_endpoint(self):
         v1 = kubernetes.client.CoreV1Api(self._cluster.Kubectl.client())
-        port = v1.read_namespaced_service(namespace=self._namespace, name='kafka-cluster-kafka-external-bootstrap').spec.ports[0].node_port
+        port = v1.read_namespaced_service(namespace=self._namespace, name='kafka-cluster-kafka-external-bootstrap').spec.ports[0].port
         return f"{self._master.ip}:{port}"
+
+    def change_namespace(self,namespace):
+        self._namespace = namespace
 
     def admin(self, **kwargs):
         self._expose()
@@ -91,7 +95,7 @@ class Kafka:
     def consumer(self, *topics, **kwargs):
         self._expose()
         options = self._add_default_options(kwargs)
-        return kafka.KafkaConsumer(*topics, **options)
+        return kafka.KafkaConsumer(security_protocol="SSL",*topics, **options)
 
     def producer(self, **kwargs):
         self._expose()
